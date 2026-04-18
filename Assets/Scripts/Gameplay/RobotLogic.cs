@@ -17,6 +17,8 @@ namespace TuringSignal.Gameplay
         public event Action<Vector2Int, Vector2Int> OnMoveSucceeded;
         public event Action<Vector2Int> OnMoveBlocked;
         public event Action<RobotIntent> OnIntentChanged;
+        public event Action<Vector2Int> OnInteractSucceeded;
+        public event Action<Vector2Int> OnInteractFailed;
 
         public RobotLogic(GridMap gridMap, Vector2Int startPosition, Direction startDirection)
         {
@@ -91,19 +93,24 @@ namespace TuringSignal.Gameplay
 
         private void ExecuteInteract()
         {
-            if (!gridMap.TryGetInteractable(GridPosition, out IBoardInteractable interactable))
+            Vector2Int targetCell = GridPosition + DirectionUtility.ToVector2Int(FacingDirection);
+
+            if (!gridMap.TryGetInteractable(targetCell, out IBoardInteractable interactable))
             {
-                Debug.Log("No interactable found on current cell.");
+                Debug.Log($"No interactable found in front cell {targetCell}.");
+                OnInteractFailed?.Invoke(targetCell);
                 return;
             }
 
             if (!interactable.CanInteract(this))
             {
                 Debug.Log("Interactable rejected the interaction.");
+                OnInteractFailed?.Invoke(targetCell);
                 return;
             }
 
             interactable.Interact(this);
+            OnInteractSucceeded?.Invoke(targetCell);
         }
     }
 }

@@ -14,6 +14,7 @@ namespace TuringSignal.View
         [SerializeField] private Color spawnCellColor = new Color(0.2f, 1f, 0.6f, 0.6f);
         [SerializeField] private Color goalCellColor = new Color(1f, 0.85f, 0.2f, 0.75f);
         [SerializeField] private Color trapCellColor = new Color(0.8f, 0.35f, 1f, 0.55f);
+        [SerializeField] private Color interactableCellColor = new Color(0.2f, 0.9f, 1f, 0.75f);
 
         private int previewWidth = 18;
         private int previewHeight = 12;
@@ -21,6 +22,7 @@ namespace TuringSignal.View
         private Vector2Int previewGoalGridPosition = new Vector2Int(1, 0);
         private Vector2Int[] previewBlockedCells = Array.Empty<Vector2Int>();
         private Vector2Int[] previewTrapCells = Array.Empty<Vector2Int>();
+        private Vector2Int[] previewInteractableCells = Array.Empty<Vector2Int>();
         private bool previewTrapsVisible = true;
 
         public Vector3 GridToWorld(Vector2Int gridPosition)
@@ -38,7 +40,8 @@ namespace TuringSignal.View
             Vector2Int goalGridPosition,
             Vector2Int[] blockedCells,
             Vector2Int[] trapCells,
-            bool trapsVisible)
+            bool trapsVisible,
+            Vector2Int[] interactableCells)
         {
             previewWidth = Mathf.Max(1, width);
             previewHeight = Mathf.Max(1, height);
@@ -47,6 +50,7 @@ namespace TuringSignal.View
             previewBlockedCells = blockedCells != null ? (Vector2Int[])blockedCells.Clone() : Array.Empty<Vector2Int>();
             previewTrapCells = trapCells != null ? (Vector2Int[])trapCells.Clone() : Array.Empty<Vector2Int>();
             previewTrapsVisible = trapsVisible;
+            previewInteractableCells = interactableCells != null ? (Vector2Int[])interactableCells.Clone() : Array.Empty<Vector2Int>();
         }
 
         private void OnDrawGizmos()
@@ -86,6 +90,14 @@ namespace TuringSignal.View
                     Vector3 trapCenter = GridToWorld(previewTrapCells[i]);
                     Gizmos.DrawCube(trapCenter, cellWorldSize * 0.35f);
                 }
+            }
+
+            Gizmos.color = interactableCellColor;
+
+            for (int i = 0; i < previewInteractableCells.Length; i++)
+            {
+                Vector3 interactableCenter = GridToWorld(previewInteractableCells[i]);
+                Gizmos.DrawCube(interactableCenter, cellWorldSize * 0.25f);
             }
 
             Gizmos.color = spawnCellColor;

@@ -100,5 +100,13 @@ namespace TuringSignal.Grid
                 cell.SetInteractable(interactable);
             }
         }
+
+        public void ClearInteractable(Vector2Int coordinate)
+        {
+            if (TryGetCell(coordinate, out GridCell cell))
+            {
+                cell.ClearInteractable();
+            }
+        }
     }
 }

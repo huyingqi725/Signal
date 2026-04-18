@@ -39,11 +39,15 @@ namespace TuringSignal.Gameplay
         [SerializeField] private bool trapsStartActive;
         [SerializeField] private int trapToggleIntervalTicks = 3;
 
+        [Header("Interactable Setup")]
+        [SerializeField] private InteractablePlacement[] interactablePlacements = new InteractablePlacement[0];
+
         [Header("Failure")]
         [SerializeField] private float restartDelay = 0.2f;
 
         private GridMap gridMap;
         private RobotLogic robotLogic;
+        private GridItemLogic[] interactableItems = new GridItemLogic[0];
         private bool isRestarting;
         private bool isTransitioning;
         private bool areTrapsActive;
@@ -66,6 +70,7 @@ namespace TuringSignal.Gameplay
 
             SanitizeBlockedCells();
             SanitizeTrapCells();
+            SanitizeInteractablePlacements();
             UpdateGridPreview();
         }
 
@@ -83,6 +88,16 @@ namespace TuringSignal.Gameplay
             for (int i = 0; i < trapCells.Length; i++)
             {
                 gridMap.SetTrap(trapCells[i], true);
+            }
+
+            interactableItems = new GridItemLogic[interactablePlacements.Length];
+
+            for (int i = 0; i < interactablePlacements.Length; i++)
+            {
+                InteractablePlacement placement = interactablePlacements[i];
+                GridItemLogic itemLogic = new GridItemLogic(gridMap, placement.interactableId, placement.gridPosition);
+                interactableItems[i] = itemLogic;
+                gridMap.SetInteractable(placement.gridPosition, itemLogic);
             }
 
             Vector2Int clampedSpawnPosition = new Vector2Int(
@@ -275,6 +290,59 @@ namespace TuringSignal.Gameplay
             trapCells = validCells.ToArray();
         }
 
+        private void SanitizeInteractablePlacements()
+        {
+            if (interactablePlacements == null)
+            {
+                interactablePlacements = new InteractablePlacement[0];
+                return;
+            }
+
+            List<InteractablePlacement> validPlacements = new List<InteractablePlacement>(interactablePlacements.Length);
+            HashSet<Vector2Int> uniqueCells = new HashSet<Vector2Int>();
+
+            for (int i = 0; i < interactablePlacements.Length; i++)
+            {
+                InteractablePlacement placement = interactablePlacements[i];
+
+                if (placement == null)
+                {
+                    continue;
+                }
+
+                Vector2Int cell = placement.gridPosition;
+
+                if (cell.x < 0 || cell.x >= gridWidth || cell.y < 0 || cell.y >= gridHeight)
+                {
+                    continue;
+                }
+
+                if (cell == robotSpawnGridPosition || cell == goalGridPosition)
+                {
+                    continue;
+                }
+
+                if (ContainsCell(blockedCells, cell) || ContainsCell(trapCells, cell))
+                {
+                    continue;
+                }
+
+                if (!uniqueCells.Add(cell))
+                {
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(placement.interactableId))
+                {
+                    placement.interactableId = $"Item_{cell.x}_{cell.y}";
+                }
+
+                validPlacements.Add(placement);
+            }
+
+            interactablePlacements = validPlacements.ToArray();
+        }
+
         private void UpdateGridPreview()
         {
             if (gridView == null)
@@ -297,7 +365,8 @@ namespace TuringSignal.Gameplay
                 clampedGoalPosition,
                 blockedCells,
                 trapCells,
-                areTrapsActive);
+                areTrapsActive,
+                GetInteractablePreviewCells());
         }
 
         private void LoadNextLevel()
@@ -358,6 +427,42 @@ namespace TuringSignal.Gameplay
             }
 
             return false;
+        }
+
+        private Vector2Int[] GetInteractablePreviewCells()
+        {
+            if (Application.isPlaying && interactableItems != null && interactableItems.Length > 0)
+            {
+                List<Vector2Int> runtimeCells = new List<Vector2Int>(interactableItems.Length);
+
+                for (int i = 0; i < interactableItems.Length; i++)
+                {
+                    GridItemLogic item = interactableItems[i];
+
+                    if (item == null || item.IsConsumed)
+                    {
+                        continue;
+                    }
+
+                    runtimeCells.Add(item.GridPosition);
+                }
+
+                return runtimeCells.ToArray();
+            }
+
+            if (interactablePlacements == null || interactablePlacements.Length == 0)
+            {
+                return new Vector2Int[0];
+            }
+
+            Vector2Int[] cells = new Vector2Int[interactablePlacements.Length];
+
+            for (int i = 0; i < interactablePlacements.Length; i++)
+            {
+                cells[i] = interactablePlacements[i].gridPosition;
+            }
+
+            return cells;
         }
     }
 }
