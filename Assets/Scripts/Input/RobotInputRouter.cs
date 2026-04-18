@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using TuringSignal.Core.Tick;
 using TuringSignal.Gameplay;
@@ -8,6 +9,9 @@ namespace TuringSignal.Input
     {
         [SerializeField] private KeyCode rotateKey = KeyCode.Space;
         [SerializeField] private KeyCode interactKey = KeyCode.E;
+
+        public event Action OnRotatePressed;
+        public event Action OnInteractPressed;
 
         private TickManager tickManager;
         private RobotLogic robotLogic;
@@ -33,11 +37,13 @@ namespace TuringSignal.Input
             if (UnityEngine.Input.GetKeyDown(rotateKey))
             {
                 robotLogic.RotateIntentClockwise();
+                OnRotatePressed?.Invoke();
             }
 
             if (UnityEngine.Input.GetKeyDown(interactKey))
             {
                 robotLogic.SetInteractIntent();
+                OnInteractPressed?.Invoke();
             }
         }
     }

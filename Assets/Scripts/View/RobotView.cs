@@ -8,7 +8,7 @@ namespace TuringSignal.View
     public sealed class RobotView : MonoBehaviour
     {
         private static readonly int FacingParameter = Animator.StringToHash("Facing");
-        private static readonly int IsInteractingParameter = Animator.StringToHash("IsInteracting");
+        private static readonly int IsInteractingParameter = Animator.StringToHash("IsInteract");
 
         [Header("Animation")]
         [SerializeField] private Animator animator;
