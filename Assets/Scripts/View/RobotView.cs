@@ -7,6 +7,11 @@ namespace TuringSignal.View
 {
     public sealed class RobotView : MonoBehaviour
     {
+        private static readonly int FacingParameter = Animator.StringToHash("Facing");
+        private static readonly int IsInteractingParameter = Animator.StringToHash("IsInteracting");
+
+        [Header("Animation")]
+        [SerializeField] private Animator animator;
         [SerializeField] private float moveDuration = 0.12f;
         [Header("Intent Arrow")]
         [SerializeField] private bool showIntentArrow = true;
@@ -29,6 +34,7 @@ namespace TuringSignal.View
 
             this.gridView = gridView;
             this.robotLogic = robotLogic;
+            animator = animator != null ? animator : GetComponent<Animator>();
 
             if (this.robotLogic == null || this.gridView == null)
             {
@@ -38,6 +44,8 @@ namespace TuringSignal.View
             this.robotLogic.OnMoveSucceeded += HandleMoveSucceeded;
             this.robotLogic.OnIntentChanged += HandleIntentChanged;
             transform.position = this.gridView.GridToWorld(this.robotLogic.GridPosition);
+            SetFacing(this.robotLogic.FacingDirection);
+            SetInteracting(this.robotLogic.PendingIntent.Type == IntentType.Interact);
 
             if (showIntentArrow)
             {
@@ -59,6 +67,7 @@ namespace TuringSignal.View
         private void HandleMoveSucceeded(Vector2Int from, Vector2Int to)
         {
             Vector3 targetPosition = gridView.GridToWorld(to);
+            SetFacing(robotLogic.FacingDirection);
 
             if (moveCoroutine != null)
             {
@@ -70,6 +79,9 @@ namespace TuringSignal.View
 
         private void HandleIntentChanged(RobotIntent intent)
         {
+            SetFacing(intent.Direction);
+            SetInteracting(intent.Type == IntentType.Interact);
+
             if (!showIntentArrow)
             {
                 return;
@@ -131,6 +143,26 @@ namespace TuringSignal.View
 
             robotLogic = null;
             gridView = null;
+        }
+
+        private void SetFacing(Direction direction)
+        {
+            if (animator == null)
+            {
+                return;
+            }
+
+            animator.SetInteger(FacingParameter, (int)direction);
+        }
+
+        private void SetInteracting(bool isInteracting)
+        {
+            if (animator == null)
+            {
+                return;
+            }
+
+            animator.SetBool(IsInteractingParameter, isInteracting);
         }
 
         private void EnsureIntentArrowRenderer()
