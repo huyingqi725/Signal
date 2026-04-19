@@ -92,11 +92,36 @@ namespace TuringSignal.Gameplay.Editor
             EditorGUILayout.PropertyField(tickManagerProperty);
             EditorGUILayout.PropertyField(gridViewProperty);
             EditorGUILayout.PropertyField(robotViewProperty);
+            DrawKeyLockViewField();
             EditorGUILayout.PropertyField(goalViewProperty);
             EditorGUILayout.PropertyField(trapViewProperty);
             EditorGUILayout.PropertyField(robotInputRouterProperty);
             EditorGUILayout.PropertyField(gameAudioProperty);
-            EditorGUILayout.PropertyField(keyLockViewProperty);
+        }
+
+        private void DrawKeyLockViewField()
+        {
+            SerializedProperty property = keyLockViewProperty;
+
+            if (property == null)
+            {
+                property = serializedObject.FindProperty("keyLockView");
+            }
+
+            if (property != null)
+            {
+                EditorGUILayout.PropertyField(
+                    property,
+                    new GUIContent(
+                        "Key Lock View",
+                        "可选。挂 KeyLockView 的物体，用于地面钥匙 / 锁 / 机器人身上钥匙的 Sprite 显示。"));
+            }
+            else
+            {
+                EditorGUILayout.HelpBox(
+                    "未找到序列化字段 keyLockView。请确认 GameBootstrap.cs 里存在 [SerializeField] KeyLockView keyLockView，并已重新编译脚本。",
+                    MessageType.Warning);
+            }
         }
 
         private void DrawGridSetup()

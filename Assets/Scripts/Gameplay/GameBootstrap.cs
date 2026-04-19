@@ -21,6 +21,7 @@ namespace TuringSignal.Gameplay
         [SerializeField] private TrapView trapView;
         [SerializeField] private RobotInputRouter robotInputRouter;
         [SerializeField] private GameAudio gameAudio;
+        [Tooltip("可选。场景里挂有 KeyLockView 的物体，用于钥匙/锁/身上钥匙的美术显示。")]
         [SerializeField] private KeyLockView keyLockView;
 
         [Header("Grid Setup")]
