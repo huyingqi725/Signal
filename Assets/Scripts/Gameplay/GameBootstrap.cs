@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using TuringSignal.Audio;
 using TuringSignal.Core.Data;
 using TuringSignal.Core.Tick;
 using TuringSignal.Grid;
@@ -16,7 +17,9 @@ namespace TuringSignal.Gameplay
         [SerializeField] private TickManager tickManager;
         [SerializeField] private GridView gridView;
         [SerializeField] private RobotView robotView;
+        [SerializeField] private TrapView trapView;
         [SerializeField] private RobotInputRouter robotInputRouter;
+        [SerializeField] private GameAudio gameAudio;
 
         [Header("Grid Setup")]
         [SerializeField] private int gridWidth = 18;
@@ -78,6 +81,7 @@ namespace TuringSignal.Gameplay
         {
             gridWidth = Mathf.Max(1, gridWidth);
             gridHeight = Mathf.Max(1, gridHeight);
+            gameAudio = gameAudio != null ? gameAudio : FindFirstObjectByType<GameAudio>();
             gridMap = new GridMap(gridWidth, gridHeight);
 
             for (int i = 0; i < blockedCells.Length; i++)
@@ -115,9 +119,19 @@ namespace TuringSignal.Gameplay
                 robotView.Bind(gridView, robotLogic);
             }
 
+            if (trapView != null)
+            {
+                trapView.Initialize(gridView, trapCells, areTrapsActive);
+            }
+
             if (robotInputRouter != null)
             {
                 robotInputRouter.Initialize(tickManager, robotLogic);
+            }
+
+            if (gameAudio != null)
+            {
+                gameAudio.Initialize(robotInputRouter, robotLogic);
             }
 
             if (tickManager != null)
@@ -160,6 +174,7 @@ namespace TuringSignal.Gameplay
             if (IsRobotOnActiveTrap())
             {
                 Debug.Log("Robot hit an active trap.");
+                PlayDeathAudio();
                 RestartCurrentLevel();
                 return;
             }
@@ -175,6 +190,11 @@ namespace TuringSignal.Gameplay
             {
                 areTrapsActive = !areTrapsActive;
                 trapToggleTickCounter = 0;
+
+                if (trapView != null)
+                {
+                    trapView.SetTrapState(areTrapsActive);
+                }
             }
 
             UpdateGridPreview();
@@ -183,6 +203,7 @@ namespace TuringSignal.Gameplay
         private void HandleMoveBlocked(Vector2Int targetCell)
         {
             Debug.Log($"Move blocked at {targetCell}.");
+            PlayDeathAudio();
             RestartCurrentLevel();
         }
 
@@ -463,6 +484,16 @@ namespace TuringSignal.Gameplay
             }
 
             return cells;
+        }
+
+        private void PlayDeathAudio()
+        {
+            if (gameAudio == null)
+            {
+                return;
+            }
+
+            gameAudio.PlayDeath();
         }
     }
 }
