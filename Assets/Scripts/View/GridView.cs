@@ -6,6 +6,7 @@ namespace TuringSignal.View
     public sealed class GridView : MonoBehaviour
     {
         [SerializeField] private Vector2 cellSize = Vector2.one;
+        [SerializeField] private bool centerGridOnOrigin = true;
         [SerializeField] private Vector2 originOffset = Vector2.zero;
         [Header("Gizmos")]
         [SerializeField] private bool drawGridGizmos = true;
@@ -27,9 +28,11 @@ namespace TuringSignal.View
 
         public Vector3 GridToWorld(Vector2Int gridPosition)
         {
+            Vector2 gridOrigin = GetGridOrigin();
+
             return new Vector3(
-                originOffset.x + (gridPosition.x * cellSize.x),
-                originOffset.y + (gridPosition.y * cellSize.y),
+                gridOrigin.x + (gridPosition.x * cellSize.x),
+                gridOrigin.y + (gridPosition.y * cellSize.y),
                 0f);
         }
 
@@ -51,6 +54,21 @@ namespace TuringSignal.View
             previewTrapCells = trapCells != null ? (Vector2Int[])trapCells.Clone() : Array.Empty<Vector2Int>();
             previewTrapsVisible = trapsVisible;
             previewInteractableCells = interactableCells != null ? (Vector2Int[])interactableCells.Clone() : Array.Empty<Vector2Int>();
+        }
+
+        private Vector2 GetGridOrigin()
+        {
+            if (!centerGridOnOrigin)
+            {
+                return originOffset;
+            }
+
+            float centeredOriginX = -((previewWidth - 1) * cellSize.x * 0.5f);
+            float centeredOriginY = -((previewHeight - 1) * cellSize.y * 0.5f);
+
+            return new Vector2(
+                centeredOriginX + originOffset.x,
+                centeredOriginY + originOffset.y);
         }
 
         private void OnDrawGizmos()
