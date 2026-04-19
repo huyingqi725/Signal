@@ -5,6 +5,12 @@ namespace TuringSignal.View
 {
     public sealed class TrapView : MonoBehaviour
     {
+        private sealed class TrapSpriteEntry
+        {
+            public SpriteRenderer Renderer;
+            public bool IsOddTrap;
+        }
+
         [Header("Sprites")]
         [SerializeField] private Sprite safeTrapSprite;
         [SerializeField] private Sprite dangerTrapSprite;
@@ -13,30 +19,30 @@ namespace TuringSignal.View
         [SerializeField] private Vector3 worldOffset = new Vector3(0f, 0f, 0f);
         [SerializeField] private int sortingOrder = 2;
 
-        private readonly List<SpriteRenderer> trapRenderers = new List<SpriteRenderer>();
+        private readonly List<TrapSpriteEntry> trapEntries = new List<TrapSpriteEntry>();
 
         private GridView gridView;
-        private bool areTrapsActive;
+        private bool oddTrapPhaseActive;
 
-        public void Initialize(GridView gridView, Vector2Int[] trapCells, bool startActive)
+        public void Initialize(GridView gridView, Vector2Int[] oddTrapCells, Vector2Int[] evenTrapCells, bool oddTrapPhaseActive)
         {
             this.gridView = gridView;
-            areTrapsActive = startActive;
+            this.oddTrapPhaseActive = oddTrapPhaseActive;
 
-            RebuildTrapRenderers(trapCells);
-            RefreshSprites();
-        }
-
-        public void SetTrapState(bool isActive)
-        {
-            areTrapsActive = isActive;
-            RefreshSprites();
-        }
-
-        private void RebuildTrapRenderers(Vector2Int[] trapCells)
-        {
             ClearExistingTrapRenderers();
+            RebuildTrapRenderers(oddTrapCells, true);
+            RebuildTrapRenderers(evenTrapCells, false);
+            RefreshSprites();
+        }
 
+        public void SetTrapPhase(bool oddTrapPhaseActive)
+        {
+            this.oddTrapPhaseActive = oddTrapPhaseActive;
+            RefreshSprites();
+        }
+
+        private void RebuildTrapRenderers(Vector2Int[] trapCells, bool isOddTrap)
+        {
             if (gridView == null || trapCells == null)
             {
                 return;
@@ -51,22 +57,27 @@ namespace TuringSignal.View
 
                 SpriteRenderer spriteRenderer = trapObject.AddComponent<SpriteRenderer>();
                 spriteRenderer.sortingOrder = sortingOrder;
-                trapRenderers.Add(spriteRenderer);
+                trapEntries.Add(new TrapSpriteEntry
+                {
+                    Renderer = spriteRenderer,
+                    IsOddTrap = isOddTrap
+                });
             }
         }
 
         private void RefreshSprites()
         {
-            Sprite targetSprite = areTrapsActive ? dangerTrapSprite : safeTrapSprite;
-
-            for (int i = 0; i < trapRenderers.Count; i++)
+            for (int i = 0; i < trapEntries.Count; i++)
             {
-                if (trapRenderers[i] == null)
+                TrapSpriteEntry entry = trapEntries[i];
+
+                if (entry == null || entry.Renderer == null)
                 {
                     continue;
                 }
 
-                trapRenderers[i].sprite = targetSprite;
+                bool isDanger = entry.IsOddTrap == oddTrapPhaseActive;
+                entry.Renderer.sprite = isDanger ? dangerTrapSprite : safeTrapSprite;
             }
         }
 
@@ -77,7 +88,7 @@ namespace TuringSignal.View
                 Destroy(transform.GetChild(i).gameObject);
             }
 
-            trapRenderers.Clear();
+            trapEntries.Clear();
         }
     }
 }

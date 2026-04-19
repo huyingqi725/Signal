@@ -40,6 +40,7 @@ namespace TuringSignal.Core.Tick
             }
 
             IsDecisionWindowOpen = false;
+            // Callback runs while CurrentTickIndex is still the executing tick; it increments only after this returns.
             OnTickExecuted?.Invoke(CurrentTickIndex);
 
             CurrentTickIndex++;

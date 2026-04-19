@@ -14,7 +14,8 @@ namespace TuringSignal.View
         [SerializeField] private Color blockedCellColor = new Color(1f, 0.2f, 0.2f, 0.45f);
         [SerializeField] private Color spawnCellColor = new Color(0.2f, 1f, 0.6f, 0.6f);
         [SerializeField] private Color goalCellColor = new Color(1f, 0.85f, 0.2f, 0.75f);
-        [SerializeField] private Color trapCellColor = new Color(0.8f, 0.35f, 1f, 0.55f);
+        [SerializeField] private Color oddTrapColor = new Color(1f, 0.45f, 0.2f, 0.75f);
+        [SerializeField] private Color evenTrapColor = new Color(0.8f, 0.35f, 1f, 0.75f);
         [SerializeField] private Color interactableCellColor = new Color(0.2f, 0.9f, 1f, 0.75f);
 
         private int previewWidth = 18;
@@ -22,9 +23,10 @@ namespace TuringSignal.View
         private Vector2Int previewSpawnGridPosition = Vector2Int.zero;
         private Vector2Int previewGoalGridPosition = new Vector2Int(1, 0);
         private Vector2Int[] previewBlockedCells = Array.Empty<Vector2Int>();
-        private Vector2Int[] previewTrapCells = Array.Empty<Vector2Int>();
+        private Vector2Int[] previewOddTrapCells = Array.Empty<Vector2Int>();
+        private Vector2Int[] previewEvenTrapCells = Array.Empty<Vector2Int>();
         private Vector2Int[] previewInteractableCells = Array.Empty<Vector2Int>();
-        private bool previewTrapsVisible = true;
+        private bool previewOddTrapPhaseActive = true;
 
         public Vector3 GridToWorld(Vector2Int gridPosition)
         {
@@ -42,8 +44,9 @@ namespace TuringSignal.View
             Vector2Int spawnGridPosition,
             Vector2Int goalGridPosition,
             Vector2Int[] blockedCells,
-            Vector2Int[] trapCells,
-            bool trapsVisible,
+            Vector2Int[] oddTrapCells,
+            Vector2Int[] evenTrapCells,
+            bool oddTrapPhaseActive,
             Vector2Int[] interactableCells)
         {
             previewWidth = Mathf.Max(1, width);
@@ -51,8 +54,9 @@ namespace TuringSignal.View
             previewSpawnGridPosition = spawnGridPosition;
             previewGoalGridPosition = goalGridPosition;
             previewBlockedCells = blockedCells != null ? (Vector2Int[])blockedCells.Clone() : Array.Empty<Vector2Int>();
-            previewTrapCells = trapCells != null ? (Vector2Int[])trapCells.Clone() : Array.Empty<Vector2Int>();
-            previewTrapsVisible = trapsVisible;
+            previewOddTrapCells = oddTrapCells != null ? (Vector2Int[])oddTrapCells.Clone() : Array.Empty<Vector2Int>();
+            previewEvenTrapCells = evenTrapCells != null ? (Vector2Int[])evenTrapCells.Clone() : Array.Empty<Vector2Int>();
+            previewOddTrapPhaseActive = oddTrapPhaseActive;
             previewInteractableCells = interactableCells != null ? (Vector2Int[])interactableCells.Clone() : Array.Empty<Vector2Int>();
         }
 
@@ -99,16 +103,8 @@ namespace TuringSignal.View
                 Gizmos.DrawCube(blockedCenter, cellWorldSize * 0.65f);
             }
 
-            if (previewTrapsVisible)
-            {
-                Gizmos.color = trapCellColor;
-
-                for (int i = 0; i < previewTrapCells.Length; i++)
-                {
-                    Vector3 trapCenter = GridToWorld(previewTrapCells[i]);
-                    Gizmos.DrawCube(trapCenter, cellWorldSize * 0.35f);
-                }
-            }
+            DrawTrapCells(previewOddTrapCells, cellWorldSize, previewOddTrapPhaseActive ? oddTrapColor : DimColor(oddTrapColor));
+            DrawTrapCells(previewEvenTrapCells, cellWorldSize, previewOddTrapPhaseActive ? DimColor(evenTrapColor) : evenTrapColor);
 
             Gizmos.color = interactableCellColor;
 
@@ -123,6 +119,27 @@ namespace TuringSignal.View
 
             Gizmos.color = goalCellColor;
             Gizmos.DrawCube(GridToWorld(previewGoalGridPosition), cellWorldSize * 0.4f);
+        }
+
+        private void DrawTrapCells(Vector2Int[] trapCells, Vector3 cellWorldSize, Color color)
+        {
+            if (trapCells == null || trapCells.Length == 0)
+            {
+                return;
+            }
+
+            Gizmos.color = color;
+
+            for (int i = 0; i < trapCells.Length; i++)
+            {
+                Vector3 trapCenter = GridToWorld(trapCells[i]);
+                Gizmos.DrawCube(trapCenter, cellWorldSize * 0.35f);
+            }
+        }
+
+        private static Color DimColor(Color color)
+        {
+            return new Color(color.r * 0.5f, color.g * 0.5f, color.b * 0.5f, color.a * 0.45f);
         }
     }
 }

@@ -21,6 +21,7 @@ namespace TuringSignal.Gameplay
         [SerializeField] private TrapView trapView;
         [SerializeField] private RobotInputRouter robotInputRouter;
         [SerializeField] private GameAudio gameAudio;
+        [SerializeField] private KeyLockView keyLockView;
 
         [Header("Grid Setup")]
         [SerializeField] private int gridWidth = 18;
@@ -39,23 +40,28 @@ namespace TuringSignal.Gameplay
         [SerializeField] private Vector2Int[] blockedCells = new Vector2Int[0];
 
         [Header("Trap Setup")]
-        [SerializeField] private Vector2Int[] trapCells = new Vector2Int[0];
-        [SerializeField] private bool trapsStartActive;
-        [SerializeField] private int trapToggleIntervalTicks = 3;
+        [SerializeField] private Vector2Int[] oddTrapCells = new Vector2Int[0];
+        [SerializeField] private Vector2Int[] evenTrapCells = new Vector2Int[0];
 
         [Header("Interactable Setup")]
+        [Tooltip("When enabled, E only sets interact intent if the cell in front of the robot has an interactable that can be used.")]
+        [SerializeField] private bool restrictInteractToFacingInteractable = true;
         [SerializeField] private InteractablePlacement[] interactablePlacements = new InteractablePlacement[0];
 
         [Header("Failure")]
         [SerializeField] private float restartDelay = 0.2f;
 
+        [Header("Debug")]
+        [SerializeField] private bool trapDebugLogs;
+
         private GridMap gridMap;
         private RobotLogic robotLogic;
-        private GridItemLogic[] interactableItems = new GridItemLogic[0];
+        private GridItemLogic[] genericInteractables = new GridItemLogic[0];
+        private KeyItemLogic[] keyInteractables = new KeyItemLogic[0];
+        private LockItemLogic[] lockInteractables = new LockItemLogic[0];
         private bool isRestarting;
         private bool isTransitioning;
-        private bool areTrapsActive;
-        private int trapToggleTickCounter;
+        private bool displayedOddTrapPhaseActive;
 
         private void OnValidate()
         {
@@ -70,11 +76,11 @@ namespace TuringSignal.Gameplay
                 Mathf.Clamp(goalGridPosition.x, 0, gridWidth - 1),
                 Mathf.Clamp(goalGridPosition.y, 0, gridHeight - 1));
 
-            trapToggleIntervalTicks = Mathf.Max(1, trapToggleIntervalTicks);
-
             SanitizeBlockedCells();
-            SanitizeTrapCells();
+            SanitizeTrapCells(ref oddTrapCells, evenTrapCells);
+            SanitizeTrapCells(ref evenTrapCells, oddTrapCells);
             SanitizeInteractablePlacements();
+            ApplyTrapPhaseForTick(0);
             UpdateGridPreview();
         }
 
@@ -90,27 +96,54 @@ namespace TuringSignal.Gameplay
                 gridMap.SetWalkable(blockedCells[i], false);
             }
 
-            for (int i = 0; i < trapCells.Length; i++)
+            for (int i = 0; i < oddTrapCells.Length; i++)
             {
-                gridMap.SetTrap(trapCells[i], true);
+                gridMap.SetTrap(oddTrapCells[i], true);
             }
 
-            interactableItems = new GridItemLogic[interactablePlacements.Length];
+            for (int i = 0; i < evenTrapCells.Length; i++)
+            {
+                gridMap.SetTrap(evenTrapCells[i], true);
+            }
+
+            List<GridItemLogic> genericList = new List<GridItemLogic>();
+            List<KeyItemLogic> keyList = new List<KeyItemLogic>();
+            List<LockItemLogic> lockList = new List<LockItemLogic>();
 
             for (int i = 0; i < interactablePlacements.Length; i++)
             {
                 InteractablePlacement placement = interactablePlacements[i];
-                GridItemLogic itemLogic = new GridItemLogic(gridMap, placement.interactableId, placement.gridPosition);
-                interactableItems[i] = itemLogic;
-                gridMap.SetInteractable(placement.gridPosition, itemLogic);
+                Vector2Int pos = placement.gridPosition;
+
+                switch (placement.role)
+                {
+                    case InteractableRole.Key:
+                        KeyItemLogic keyLogic = new KeyItemLogic(gridMap, placement.keyColor, pos);
+                        keyList.Add(keyLogic);
+                        gridMap.SetInteractable(pos, keyLogic);
+                        break;
+                    case InteractableRole.Lock:
+                        LockItemLogic lockLogic = new LockItemLogic(gridMap, placement.keyColor, pos);
+                        lockList.Add(lockLogic);
+                        gridMap.SetInteractable(pos, lockLogic);
+                        break;
+                    default:
+                        GridItemLogic itemLogic = new GridItemLogic(gridMap, placement.interactableId, pos);
+                        genericList.Add(itemLogic);
+                        gridMap.SetInteractable(pos, itemLogic);
+                        break;
+                }
             }
+
+            genericInteractables = genericList.ToArray();
+            keyInteractables = keyList.ToArray();
+            lockInteractables = lockList.ToArray();
 
             Vector2Int clampedSpawnPosition = new Vector2Int(
                 Mathf.Clamp(robotSpawnGridPosition.x, 0, gridWidth - 1),
                 Mathf.Clamp(robotSpawnGridPosition.y, 0, gridHeight - 1));
 
-            areTrapsActive = trapsStartActive;
-            trapToggleTickCounter = 0;
+            ApplyTrapPhaseForTick(0);
             UpdateGridPreview();
 
             robotLogic = new RobotLogic(gridMap, clampedSpawnPosition, robotSpawnDirection);
@@ -120,6 +153,11 @@ namespace TuringSignal.Gameplay
                 robotView.Bind(gridView, robotLogic);
             }
 
+            if (keyLockView != null && gridView != null && robotView != null)
+            {
+                keyLockView.Initialize(gridView, robotView.transform, robotLogic, keyInteractables, lockInteractables);
+            }
+
             if (goalView != null)
             {
                 goalView.Initialize(gridView, goalGridPosition);
@@ -127,12 +165,12 @@ namespace TuringSignal.Gameplay
 
             if (trapView != null)
             {
-                trapView.Initialize(gridView, trapCells, areTrapsActive);
+                trapView.Initialize(gridView, oddTrapCells, evenTrapCells, IsOddTrapPhase(0));
             }
 
             if (robotInputRouter != null)
             {
-                robotInputRouter.Initialize(tickManager, robotLogic);
+                robotInputRouter.Initialize(tickManager, robotLogic, restrictInteractToFacingInteractable);
             }
 
             if (gameAudio != null)
@@ -180,36 +218,16 @@ namespace TuringSignal.Gameplay
                 return;
             }
 
+            Vector2Int robotCellBefore = robotLogic.GridPosition;
+            RobotIntent intentForTick = robotLogic.PendingIntent;
+            ApplyTrapPhaseForTick(tickIndex);
             robotLogic.ExecutePendingIntent();
-
-            if (IsRobotOnActiveTrap())
-            {
-                Debug.Log("Robot hit an active trap.");
-                PlayDeathAudio();
-                RestartCurrentLevel();
-                return;
-            }
-
-            if (robotLogic.GridPosition == goalGridPosition)
-            {
-                StartGoalTransition();
-                return;
-            }
-
-            trapToggleTickCounter++;
-
-            if (trapToggleTickCounter >= trapToggleIntervalTicks)
-            {
-                areTrapsActive = !areTrapsActive;
-                trapToggleTickCounter = 0;
-
-                if (trapView != null)
-                {
-                    trapView.SetTrapState(areTrapsActive);
-                }
-            }
-
-            UpdateGridPreview();
+            Vector2Int robotCellAfter = robotLogic.GridPosition;
+            int trapEvalTickIndex = GetTrapEvaluationTickIndex(tickIndex, intentForTick.Type);
+            bool hitTrap = IsRobotOnActiveTrap(trapEvalTickIndex);
+            bool reachedGoal = robotLogic.GridPosition == goalGridPosition;
+            LogTrapTickDebug(tickIndex, trapEvalTickIndex, intentForTick, robotCellBefore, robotCellAfter, hitTrap);
+            StartCoroutine(ResolveTickOutcomeAfterVisuals(tickIndex, hitTrap, reachedGoal));
         }
 
         private void HandleMoveBlocked(Vector2Int targetCell)
@@ -282,7 +300,7 @@ namespace TuringSignal.Gameplay
             blockedCells = validCells.ToArray();
         }
 
-        private void SanitizeTrapCells()
+        private void SanitizeTrapCells(ref Vector2Int[] trapCells, Vector2Int[] otherTrapCells)
         {
             if (trapCells == null)
             {
@@ -308,6 +326,11 @@ namespace TuringSignal.Gameplay
                 }
 
                 if (ContainsCell(blockedCells, cell))
+                {
+                    continue;
+                }
+
+                if (ContainsCell(otherTrapCells, cell))
                 {
                     continue;
                 }
@@ -355,7 +378,7 @@ namespace TuringSignal.Gameplay
                     continue;
                 }
 
-                if (ContainsCell(blockedCells, cell) || ContainsCell(trapCells, cell))
+                if (ContainsCell(blockedCells, cell) || ContainsCell(oddTrapCells, cell) || ContainsCell(evenTrapCells, cell))
                 {
                     continue;
                 }
@@ -391,14 +414,19 @@ namespace TuringSignal.Gameplay
                 Mathf.Clamp(goalGridPosition.x, 0, gridWidth - 1),
                 Mathf.Clamp(goalGridPosition.y, 0, gridHeight - 1));
 
+            bool oddTrapPhaseForPreview = Application.isPlaying && tickManager != null
+                ? IsOddTrapPhase(tickManager.CurrentTickIndex)
+                : IsOddTrapPhase(0);
+
             gridView.ConfigurePreview(
                 gridWidth,
                 gridHeight,
                 clampedSpawnPosition,
                 clampedGoalPosition,
                 blockedCells,
-                trapCells,
-                areTrapsActive,
+                oddTrapCells,
+                evenTrapCells,
+                Application.isPlaying ? displayedOddTrapPhaseActive : oddTrapPhaseForPreview,
                 GetInteractablePreviewCells());
         }
 
@@ -455,9 +483,28 @@ namespace TuringSignal.Gameplay
             isTransitioning = false;
         }
 
-        private bool IsRobotOnActiveTrap()
+        /// <summary>
+        /// Which global tick index determines trap danger for the robot state *after* this execution.
+        /// Move: landing occupies the new cell starting the next tick boundary → use executedTickIndex + 1
+        /// (matches TickManager increment after OnTickExecuted).
+        /// Interact (no move): robot stays on the same cell for this beat → use executedTickIndex.
+        /// </summary>
+        private static int GetTrapEvaluationTickIndex(int executedTickIndex, IntentType intentType)
         {
-            return areTrapsActive && gridMap.HasTrapAt(robotLogic.GridPosition);
+            return intentType == IntentType.Move ? executedTickIndex + 1 : executedTickIndex;
+        }
+
+        private bool IsRobotOnActiveTrap(int tickIndex)
+        {
+            if (robotLogic == null)
+            {
+                return false;
+            }
+
+            Vector2Int robotCell = robotLogic.GridPosition;
+            return IsOddTrapPhase(tickIndex)
+                ? ContainsCell(oddTrapCells, robotCell)
+                : ContainsCell(evenTrapCells, robotCell);
         }
 
         private static bool ContainsCell(Vector2Int[] cells, Vector2Int targetCell)
@@ -480,23 +527,59 @@ namespace TuringSignal.Gameplay
 
         private Vector2Int[] GetInteractablePreviewCells()
         {
-            if (Application.isPlaying && interactableItems != null && interactableItems.Length > 0)
+            if (Application.isPlaying)
             {
-                List<Vector2Int> runtimeCells = new List<Vector2Int>(interactableItems.Length);
+                List<Vector2Int> runtimeCells = new List<Vector2Int>(8);
 
-                for (int i = 0; i < interactableItems.Length; i++)
+                if (genericInteractables != null)
                 {
-                    GridItemLogic item = interactableItems[i];
-
-                    if (item == null || item.IsConsumed)
+                    for (int i = 0; i < genericInteractables.Length; i++)
                     {
-                        continue;
-                    }
+                        GridItemLogic item = genericInteractables[i];
 
-                    runtimeCells.Add(item.GridPosition);
+                        if (item == null || item.IsConsumed)
+                        {
+                            continue;
+                        }
+
+                        runtimeCells.Add(item.GridPosition);
+                    }
                 }
 
-                return runtimeCells.ToArray();
+                if (keyInteractables != null)
+                {
+                    for (int i = 0; i < keyInteractables.Length; i++)
+                    {
+                        KeyItemLogic key = keyInteractables[i];
+
+                        if (key == null || key.IsPickedUp)
+                        {
+                            continue;
+                        }
+
+                        runtimeCells.Add(key.GridPosition);
+                    }
+                }
+
+                if (lockInteractables != null)
+                {
+                    for (int i = 0; i < lockInteractables.Length; i++)
+                    {
+                        LockItemLogic lo = lockInteractables[i];
+
+                        if (lo == null)
+                        {
+                            continue;
+                        }
+
+                        runtimeCells.Add(lo.GridPosition);
+                    }
+                }
+
+                if (runtimeCells.Count > 0)
+                {
+                    return runtimeCells.ToArray();
+                }
             }
 
             if (interactablePlacements == null || interactablePlacements.Length == 0)
@@ -522,6 +605,83 @@ namespace TuringSignal.Gameplay
             }
 
             gameAudio.PlayDeath();
+        }
+
+        private void ApplyTrapPhaseForTick(int tickIndex)
+        {
+            displayedOddTrapPhaseActive = IsOddTrapPhase(tickIndex);
+
+            if (trapView != null)
+            {
+                trapView.SetTrapPhase(displayedOddTrapPhaseActive);
+            }
+        }
+
+        private static bool IsOddTrapPhase(int tickIndex)
+        {
+            return ((tickIndex + 1) % 2) == 1;
+        }
+
+        private IEnumerator ResolveTickOutcomeAfterVisuals(int tickIndex, bool hitTrap, bool reachedGoal)
+        {
+            float visualDelay = robotView != null ? robotView.MoveDuration : 0f;
+
+            if (visualDelay > 0f)
+            {
+                yield return new WaitForSeconds(visualDelay);
+            }
+
+            if (isTransitioning || isRestarting)
+            {
+                yield break;
+            }
+
+            if (hitTrap)
+            {
+                Debug.Log("Robot hit an active trap.");
+                PlayDeathAudio();
+                RestartCurrentLevel();
+                yield break;
+            }
+
+            if (reachedGoal)
+            {
+                StartGoalTransition();
+                yield break;
+            }
+
+            ApplyTrapPhaseForTick(tickIndex + 1);
+            UpdateGridPreview();
+        }
+
+        private void LogTrapTickDebug(
+            int executedTickIndex,
+            int trapEvalTickIndex,
+            RobotIntent intentForTick,
+            Vector2Int robotCellBefore,
+            Vector2Int robotCellAfter,
+            bool hitTrap)
+        {
+            if (!trapDebugLogs)
+            {
+                return;
+            }
+
+            bool oddPhaseExec = IsOddTrapPhase(executedTickIndex);
+            bool oddPhaseEval = IsOddTrapPhase(trapEvalTickIndex);
+            bool onOddTrapBefore = ContainsCell(oddTrapCells, robotCellBefore);
+            bool onEvenTrapBefore = ContainsCell(evenTrapCells, robotCellBefore);
+            bool onOddTrapAfter = ContainsCell(oddTrapCells, robotCellAfter);
+            bool onEvenTrapAfter = ContainsCell(evenTrapCells, robotCellAfter);
+
+            Debug.Log(
+                $"[TrapDebug] ExecTick={executedTickIndex} ExecPhase={(oddPhaseExec ? "ODD" : "EVEN")} " +
+                $"TrapEvalTick={trapEvalTickIndex} EvalPhase={(oddPhaseEval ? "ODD" : "EVEN")} " +
+                $"Intent={intentForTick.Type}/{intentForTick.Direction} " +
+                $"Before={robotCellBefore} After={robotCellAfter} " +
+                $"BeforeTrap(O:{onOddTrapBefore},E:{onEvenTrapBefore}) " +
+                $"AfterTrap(O:{onOddTrapAfter},E:{onEvenTrapAfter}) " +
+                $"HitTrap={hitTrap}");
         }
     }
 }

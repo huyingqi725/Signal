@@ -1,3 +1,5 @@
+using TuringSignal.Core.Data;
+using TuringSignal.Gameplay;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,6 +17,7 @@ namespace TuringSignal.Gameplay.Editor
         private SerializedProperty trapViewProperty;
         private SerializedProperty robotInputRouterProperty;
         private SerializedProperty gameAudioProperty;
+        private SerializedProperty keyLockViewProperty;
         private SerializedProperty gridWidthProperty;
         private SerializedProperty gridHeightProperty;
         private SerializedProperty robotSpawnGridPositionProperty;
@@ -23,11 +26,12 @@ namespace TuringSignal.Gameplay.Editor
         private SerializedProperty nextSceneNameProperty;
         private SerializedProperty nextLevelDelayProperty;
         private SerializedProperty blockedCellsProperty;
-        private SerializedProperty trapCellsProperty;
-        private SerializedProperty trapsStartActiveProperty;
-        private SerializedProperty trapToggleIntervalTicksProperty;
+        private SerializedProperty oddTrapCellsProperty;
+        private SerializedProperty evenTrapCellsProperty;
         private SerializedProperty interactablePlacementsProperty;
+        private SerializedProperty restrictInteractToFacingInteractableProperty;
         private SerializedProperty restartDelayProperty;
+        private SerializedProperty trapDebugLogsProperty;
 
         private void OnEnable()
         {
@@ -38,6 +42,7 @@ namespace TuringSignal.Gameplay.Editor
             trapViewProperty = serializedObject.FindProperty("trapView");
             robotInputRouterProperty = serializedObject.FindProperty("robotInputRouter");
             gameAudioProperty = serializedObject.FindProperty("gameAudio");
+            keyLockViewProperty = serializedObject.FindProperty("keyLockView");
             gridWidthProperty = serializedObject.FindProperty("gridWidth");
             gridHeightProperty = serializedObject.FindProperty("gridHeight");
             robotSpawnGridPositionProperty = serializedObject.FindProperty("robotSpawnGridPosition");
@@ -46,11 +51,12 @@ namespace TuringSignal.Gameplay.Editor
             nextSceneNameProperty = serializedObject.FindProperty("nextSceneName");
             nextLevelDelayProperty = serializedObject.FindProperty("nextLevelDelay");
             blockedCellsProperty = serializedObject.FindProperty("blockedCells");
-            trapCellsProperty = serializedObject.FindProperty("trapCells");
-            trapsStartActiveProperty = serializedObject.FindProperty("trapsStartActive");
-            trapToggleIntervalTicksProperty = serializedObject.FindProperty("trapToggleIntervalTicks");
+            oddTrapCellsProperty = serializedObject.FindProperty("oddTrapCells");
+            evenTrapCellsProperty = serializedObject.FindProperty("evenTrapCells");
             interactablePlacementsProperty = serializedObject.FindProperty("interactablePlacements");
+            restrictInteractToFacingInteractableProperty = serializedObject.FindProperty("restrictInteractToFacingInteractable");
             restartDelayProperty = serializedObject.FindProperty("restartDelay");
+            trapDebugLogsProperty = serializedObject.FindProperty("trapDebugLogs");
         }
 
         public override void OnInspectorGUI()
@@ -74,6 +80,8 @@ namespace TuringSignal.Gameplay.Editor
             DrawTransitionSetup();
             EditorGUILayout.Space(6f);
             EditorGUILayout.PropertyField(restartDelayProperty);
+            EditorGUILayout.Space(6f);
+            DrawDebugSection();
 
             serializedObject.ApplyModifiedProperties();
         }
@@ -88,6 +96,7 @@ namespace TuringSignal.Gameplay.Editor
             EditorGUILayout.PropertyField(trapViewProperty);
             EditorGUILayout.PropertyField(robotInputRouterProperty);
             EditorGUILayout.PropertyField(gameAudioProperty);
+            EditorGUILayout.PropertyField(keyLockViewProperty);
         }
 
         private void DrawGridSetup()
@@ -115,6 +124,19 @@ namespace TuringSignal.Gameplay.Editor
             EditorGUILayout.LabelField("Level Transition", EditorStyles.boldLabel);
             EditorGUILayout.PropertyField(nextSceneNameProperty);
             EditorGUILayout.PropertyField(nextLevelDelayProperty);
+        }
+
+        private void DrawDebugSection()
+        {
+            EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
+            if (trapDebugLogsProperty != null)
+            {
+                EditorGUILayout.PropertyField(trapDebugLogsProperty);
+            }
+            else
+            {
+                EditorGUILayout.HelpBox("trapDebugLogs field not found on GameBootstrap.", MessageType.Warning);
+            }
         }
 
         private void DrawBlockedCellEditor()
@@ -188,75 +210,38 @@ namespace TuringSignal.Gameplay.Editor
 
         private void DrawTrapCellEditor()
         {
-            EditorGUILayout.LabelField("Trap Setup", EditorStyles.boldLabel);
-            EditorGUILayout.PropertyField(trapsStartActiveProperty);
-            EditorGUILayout.PropertyField(trapToggleIntervalTicksProperty);
-            EditorGUILayout.HelpBox("点击下面的格子即可切换是否为尖刺。紫色是尖刺，出生点/终点/障碍物不能设置为尖刺。尖刺每经过指定数量的玩家 Tick 才会切换一次显隐。", MessageType.None);
+            DrawTrapGroupEditor(
+                "Odd Trap Setup",
+                "点击下面的格子即可切换是否为单数拍危险的 trap。橙色 O 是 odd trap，灰色 - 代表该格已经被 even trap 占用。",
+                oddTrapCellsProperty,
+                evenTrapCellsProperty,
+                "O",
+                new Color(0.95f, 0.55f, 0.2f));
 
-            int width = Mathf.Max(1, gridWidthProperty.intValue);
-            int height = Mathf.Max(1, gridHeightProperty.intValue);
-            Vector2Int spawnCell = robotSpawnGridPositionProperty.vector2IntValue;
-            Vector2Int goalCell = goalGridPositionProperty.vector2IntValue;
+            EditorGUILayout.Space(6f);
 
-            for (int y = height - 1; y >= 0; y--)
-            {
-                EditorGUILayout.BeginHorizontal();
-
-                for (int x = 0; x < width; x++)
-                {
-                    Vector2Int cell = new Vector2Int(x, y);
-                    bool isSpawn = cell == spawnCell;
-                    bool isGoal = cell == goalCell;
-                    bool isBlocked = ContainsBlockedCell(cell);
-                    bool isTrap = ContainsTrapCell(cell);
-
-                    Color previousColor = GUI.backgroundColor;
-
-                    if (isSpawn)
-                    {
-                        GUI.backgroundColor = new Color(0.35f, 0.8f, 0.45f);
-                    }
-                    else if (isGoal)
-                    {
-                        GUI.backgroundColor = new Color(0.95f, 0.8f, 0.25f);
-                    }
-                    else if (isBlocked)
-                    {
-                        GUI.backgroundColor = new Color(0.85f, 0.35f, 0.35f);
-                    }
-                    else if (isTrap)
-                    {
-                        GUI.backgroundColor = new Color(0.75f, 0.45f, 0.95f);
-                    }
-
-                    string label = isSpawn ? "S" : isGoal ? "G" : isBlocked ? "X" : isTrap ? "T" : string.Empty;
-
-                    using (new EditorGUI.DisabledScope(isSpawn || isGoal || isBlocked))
-                    {
-                        if (GUILayout.Button(label, GUILayout.Width(CellButtonSize), GUILayout.Height(CellButtonSize)))
-                        {
-                            ToggleTrapCell(cell);
-                        }
-                    }
-
-                    GUI.backgroundColor = previousColor;
-                }
-
-                EditorGUILayout.EndHorizontal();
-            }
-
-            if (GUILayout.Button("Clear Trap Cells"))
-            {
-                trapCellsProperty.arraySize = 0;
-            }
-
-            EditorGUILayout.PropertyField(trapCellsProperty, true);
+            DrawTrapGroupEditor(
+                "Even Trap Setup",
+                "点击下面的格子即可切换是否为双数拍危险的 trap。紫色 E 是 even trap，灰色 - 代表该格已经被 odd trap 占用。",
+                evenTrapCellsProperty,
+                oddTrapCellsProperty,
+                "E",
+                new Color(0.75f, 0.45f, 0.95f));
         }
 
         private void DrawInteractableEditor()
         {
             EditorGUILayout.LabelField("Interactable Setup", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox("点击下面的格子即可切换是否放置基础交互物。蓝色是交互物，机器人按 E 后会在下一拍交互面前一格。", MessageType.None);
+            if (restrictInteractToFacingInteractableProperty != null)
+            {
+                EditorGUILayout.PropertyField(restrictInteractToFacingInteractableProperty);
+            }
+
+            EditorGUILayout.HelpBox(
+                "点击格子循环：空 → 通用 I → 红钥匙 KR → 蓝钥匙 KB → 红锁 LR → 蓝锁 LB → 删除。" +
+                "机器人身上已有钥匙时不能再交互其它物体，必须把钥匙放进同色锁。" +
+                "勾选上方限制开关时，仅当前方有可交互物时才能按 E。",
+                MessageType.None);
 
             int width = Mathf.Max(1, gridWidthProperty.intValue);
             int height = Mathf.Max(1, gridHeightProperty.intValue);
@@ -275,6 +260,7 @@ namespace TuringSignal.Gameplay.Editor
                     bool isBlocked = ContainsBlockedCell(cell);
                     bool isTrap = ContainsTrapCell(cell);
                     bool hasInteractable = ContainsInteractableCell(cell);
+                    string interactableLabel = GetInteractableCellLabel(cell);
 
                     Color previousColor = GUI.backgroundColor;
 
@@ -296,16 +282,26 @@ namespace TuringSignal.Gameplay.Editor
                     }
                     else if (hasInteractable)
                     {
-                        GUI.backgroundColor = new Color(0.25f, 0.75f, 0.95f);
+                        GUI.backgroundColor = GetInteractableCellButtonColor(cell);
                     }
 
-                    string label = isSpawn ? "S" : isGoal ? "G" : isBlocked ? "X" : isTrap ? "T" : hasInteractable ? "I" : string.Empty;
+                    string label = isSpawn
+                        ? "S"
+                        : isGoal
+                            ? "G"
+                            : isBlocked
+                                ? "X"
+                                : isTrap
+                                    ? "T"
+                                    : hasInteractable
+                                        ? interactableLabel
+                                        : string.Empty;
 
                     using (new EditorGUI.DisabledScope(isSpawn || isGoal || isBlocked || isTrap))
                     {
                         if (GUILayout.Button(label, GUILayout.Width(CellButtonSize), GUILayout.Height(CellButtonSize)))
                         {
-                            ToggleInteractableCell(cell);
+                            CycleInteractableCell(cell);
                         }
                     }
 
@@ -338,9 +334,19 @@ namespace TuringSignal.Gameplay.Editor
 
         private bool ContainsTrapCell(Vector2Int cell)
         {
-            for (int i = 0; i < trapCellsProperty.arraySize; i++)
+            return ContainsTrapCell(oddTrapCellsProperty, cell) || ContainsTrapCell(evenTrapCellsProperty, cell);
+        }
+
+        private bool ContainsTrapCell(SerializedProperty trapProperty, Vector2Int cell)
+        {
+            if (trapProperty == null)
             {
-                if (trapCellsProperty.GetArrayElementAtIndex(i).vector2IntValue == cell)
+                return false;
+            }
+
+            for (int i = 0; i < trapProperty.arraySize; i++)
+            {
+                if (trapProperty.GetArrayElementAtIndex(i).vector2IntValue == cell)
                 {
                     return true;
                 }
@@ -381,23 +387,7 @@ namespace TuringSignal.Gameplay.Editor
             blockedCellsProperty.GetArrayElementAtIndex(newIndex).vector2IntValue = cell;
         }
 
-        private void ToggleTrapCell(Vector2Int cell)
-        {
-            for (int i = 0; i < trapCellsProperty.arraySize; i++)
-            {
-                if (trapCellsProperty.GetArrayElementAtIndex(i).vector2IntValue == cell)
-                {
-                    trapCellsProperty.DeleteArrayElementAtIndex(i);
-                    return;
-                }
-            }
-
-            int newIndex = trapCellsProperty.arraySize;
-            trapCellsProperty.InsertArrayElementAtIndex(newIndex);
-            trapCellsProperty.GetArrayElementAtIndex(newIndex).vector2IntValue = cell;
-        }
-
-        private void ToggleInteractableCell(Vector2Int cell)
+        private int FindInteractablePlacementIndex(Vector2Int cell)
         {
             for (int i = 0; i < interactablePlacementsProperty.arraySize; i++)
             {
@@ -406,17 +396,202 @@ namespace TuringSignal.Gameplay.Editor
 
                 if (gridPosition.vector2IntValue == cell)
                 {
-                    interactablePlacementsProperty.DeleteArrayElementAtIndex(i);
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        private static string GetInteractableLabelForPlacement(SerializedProperty placement)
+        {
+            SerializedProperty roleProp = placement.FindPropertyRelative("role");
+            SerializedProperty colorProp = placement.FindPropertyRelative("keyColor");
+            var role = (InteractableRole)roleProp.enumValueIndex;
+            var color = (KeyColor)colorProp.enumValueIndex;
+
+            switch (role)
+            {
+                case InteractableRole.Key:
+                    return color == KeyColor.Red ? "KR" : "KB";
+                case InteractableRole.Lock:
+                    return color == KeyColor.Red ? "LR" : "LB";
+                default:
+                    return "I";
+            }
+        }
+
+        private string GetInteractableCellLabel(Vector2Int cell)
+        {
+            int index = FindInteractablePlacementIndex(cell);
+
+            if (index < 0)
+            {
+                return string.Empty;
+            }
+
+            return GetInteractableLabelForPlacement(interactablePlacementsProperty.GetArrayElementAtIndex(index));
+        }
+
+        private Color GetInteractableCellButtonColor(Vector2Int cell)
+        {
+            int index = FindInteractablePlacementIndex(cell);
+
+            if (index < 0)
+            {
+                return new Color(0.25f, 0.75f, 0.95f);
+            }
+
+            SerializedProperty placement = interactablePlacementsProperty.GetArrayElementAtIndex(index);
+            var role = (InteractableRole)placement.FindPropertyRelative("role").enumValueIndex;
+            var color = (KeyColor)placement.FindPropertyRelative("keyColor").enumValueIndex;
+
+            if (role == InteractableRole.Key)
+            {
+                return color == KeyColor.Red ? new Color(0.95f, 0.35f, 0.35f) : new Color(0.35f, 0.55f, 0.95f);
+            }
+
+            if (role == InteractableRole.Lock)
+            {
+                return color == KeyColor.Red ? new Color(0.75f, 0.2f, 0.2f) : new Color(0.2f, 0.35f, 0.75f);
+            }
+
+            return new Color(0.25f, 0.75f, 0.95f);
+        }
+
+        private void CycleInteractableCell(Vector2Int cell)
+        {
+            int index = FindInteractablePlacementIndex(cell);
+
+            if (index < 0)
+            {
+                int newIndex = interactablePlacementsProperty.arraySize;
+                interactablePlacementsProperty.InsertArrayElementAtIndex(newIndex);
+                SerializedProperty newPlacement = interactablePlacementsProperty.GetArrayElementAtIndex(newIndex);
+                newPlacement.FindPropertyRelative("gridPosition").vector2IntValue = cell;
+                newPlacement.FindPropertyRelative("role").enumValueIndex = (int)InteractableRole.GenericItem;
+                newPlacement.FindPropertyRelative("keyColor").enumValueIndex = (int)KeyColor.Red;
+                newPlacement.FindPropertyRelative("interactableId").stringValue = $"Item_{cell.x}_{cell.y}";
+                return;
+            }
+
+            SerializedProperty placement = interactablePlacementsProperty.GetArrayElementAtIndex(index);
+            var role = (InteractableRole)placement.FindPropertyRelative("role").enumValueIndex;
+            var color = (KeyColor)placement.FindPropertyRelative("keyColor").enumValueIndex;
+
+            if (role == InteractableRole.GenericItem)
+            {
+                placement.FindPropertyRelative("role").enumValueIndex = (int)InteractableRole.Key;
+                placement.FindPropertyRelative("keyColor").enumValueIndex = (int)KeyColor.Red;
+                return;
+            }
+
+            if (role == InteractableRole.Key && color == KeyColor.Red)
+            {
+                placement.FindPropertyRelative("keyColor").enumValueIndex = (int)KeyColor.Blue;
+                return;
+            }
+
+            if (role == InteractableRole.Key && color == KeyColor.Blue)
+            {
+                placement.FindPropertyRelative("role").enumValueIndex = (int)InteractableRole.Lock;
+                placement.FindPropertyRelative("keyColor").enumValueIndex = (int)KeyColor.Red;
+                return;
+            }
+
+            if (role == InteractableRole.Lock && color == KeyColor.Red)
+            {
+                placement.FindPropertyRelative("keyColor").enumValueIndex = (int)KeyColor.Blue;
+                return;
+            }
+
+            interactablePlacementsProperty.DeleteArrayElementAtIndex(index);
+        }
+
+        private void DrawTrapGroupEditor(string title, string helpText, SerializedProperty targetTrapProperty, SerializedProperty otherTrapProperty, string trapLabel, Color trapColor)
+        {
+            EditorGUILayout.LabelField(title, EditorStyles.boldLabel);
+            EditorGUILayout.HelpBox(helpText, MessageType.None);
+
+            int width = Mathf.Max(1, gridWidthProperty.intValue);
+            int height = Mathf.Max(1, gridHeightProperty.intValue);
+            Vector2Int spawnCell = robotSpawnGridPositionProperty.vector2IntValue;
+            Vector2Int goalCell = goalGridPositionProperty.vector2IntValue;
+
+            for (int y = height - 1; y >= 0; y--)
+            {
+                EditorGUILayout.BeginHorizontal();
+
+                for (int x = 0; x < width; x++)
+                {
+                    Vector2Int cell = new Vector2Int(x, y);
+                    bool isSpawn = cell == spawnCell;
+                    bool isGoal = cell == goalCell;
+                    bool isBlocked = ContainsBlockedCell(cell);
+                    bool isOtherTrap = ContainsTrapCell(otherTrapProperty, cell);
+                    bool isCurrentTrap = ContainsTrapCell(targetTrapProperty, cell);
+
+                    Color previousColor = GUI.backgroundColor;
+
+                    if (isSpawn)
+                    {
+                        GUI.backgroundColor = new Color(0.35f, 0.8f, 0.45f);
+                    }
+                    else if (isGoal)
+                    {
+                        GUI.backgroundColor = new Color(0.95f, 0.8f, 0.25f);
+                    }
+                    else if (isBlocked)
+                    {
+                        GUI.backgroundColor = new Color(0.85f, 0.35f, 0.35f);
+                    }
+                    else if (isOtherTrap)
+                    {
+                        GUI.backgroundColor = new Color(0.45f, 0.45f, 0.45f);
+                    }
+                    else if (isCurrentTrap)
+                    {
+                        GUI.backgroundColor = trapColor;
+                    }
+
+                    string label = isSpawn ? "S" : isGoal ? "G" : isBlocked ? "X" : isOtherTrap ? "-" : isCurrentTrap ? trapLabel : string.Empty;
+
+                    using (new EditorGUI.DisabledScope(isSpawn || isGoal || isBlocked || isOtherTrap))
+                    {
+                        if (GUILayout.Button(label, GUILayout.Width(CellButtonSize), GUILayout.Height(CellButtonSize)))
+                        {
+                            ToggleTrapCell(targetTrapProperty, cell);
+                        }
+                    }
+
+                    GUI.backgroundColor = previousColor;
+                }
+
+                EditorGUILayout.EndHorizontal();
+            }
+
+            if (GUILayout.Button($"Clear {title}"))
+            {
+                targetTrapProperty.arraySize = 0;
+            }
+
+            EditorGUILayout.PropertyField(targetTrapProperty, true);
+        }
+
+        private void ToggleTrapCell(SerializedProperty trapProperty, Vector2Int cell)
+        {
+            for (int i = 0; i < trapProperty.arraySize; i++)
+            {
+                if (trapProperty.GetArrayElementAtIndex(i).vector2IntValue == cell)
+                {
+                    trapProperty.DeleteArrayElementAtIndex(i);
                     return;
                 }
             }
 
-            int newIndex = interactablePlacementsProperty.arraySize;
-            interactablePlacementsProperty.InsertArrayElementAtIndex(newIndex);
-
-            SerializedProperty newPlacement = interactablePlacementsProperty.GetArrayElementAtIndex(newIndex);
-            newPlacement.FindPropertyRelative("gridPosition").vector2IntValue = cell;
-            newPlacement.FindPropertyRelative("interactableId").stringValue = $"Item_{cell.x}_{cell.y}";
+            int newIndex = trapProperty.arraySize;
+            trapProperty.InsertArrayElementAtIndex(newIndex);
+            trapProperty.GetArrayElementAtIndex(newIndex).vector2IntValue = cell;
         }
 
         private void FillBorderWalls(int width, int height, Vector2Int spawnCell, Vector2Int goalCell)

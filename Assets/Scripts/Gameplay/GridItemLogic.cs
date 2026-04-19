@@ -23,7 +23,17 @@ namespace TuringSignal.Gameplay
 
         public bool CanInteract(RobotLogic robotLogic)
         {
-            return !IsConsumed;
+            if (IsConsumed)
+            {
+                return false;
+            }
+
+            if (robotLogic.CarriesKey)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         public void Interact(RobotLogic robotLogic)

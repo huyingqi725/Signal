@@ -8,12 +8,17 @@ namespace TuringSignal.Gameplay
     public sealed class RobotLogic
     {
         private readonly GridMap gridMap;
+        private KeyColor? carriedKey;
 
         public Vector2Int GridPosition { get; private set; }
         public Direction FacingDirection { get; private set; }
         public RobotIntent PendingIntent { get; private set; }
         public RobotIntent LockedIntent { get; private set; }
 
+        public KeyColor? CarriedKey => carriedKey;
+        public bool CarriesKey => carriedKey.HasValue;
+
+        public event Action<KeyColor?> OnCarriedKeyChanged;
         public event Action<Vector2Int, Vector2Int> OnMoveSucceeded;
         public event Action<Vector2Int> OnMoveBlocked;
         public event Action<RobotIntent> OnIntentChanged;
@@ -51,6 +56,45 @@ namespace TuringSignal.Gameplay
         {
             PendingIntent = RobotIntent.CreateInteract(FacingDirection);
             OnIntentChanged?.Invoke(PendingIntent);
+        }
+
+        public bool TryPickupKey(KeyColor keyColor)
+        {
+            if (carriedKey.HasValue)
+            {
+                return false;
+            }
+
+            carriedKey = keyColor;
+            OnCarriedKeyChanged?.Invoke(carriedKey);
+            return true;
+        }
+
+        public bool TryConsumeCarriedKeyForLock(KeyColor lockColor)
+        {
+            if (!carriedKey.HasValue || carriedKey.Value != lockColor)
+            {
+                return false;
+            }
+
+            carriedKey = null;
+            OnCarriedKeyChanged?.Invoke(null);
+            return true;
+        }
+
+        /// <summary>
+        /// True if the cell in front of the robot (same as <see cref="ExecuteInteract"/>) has an interactable that accepts interaction right now.
+        /// </summary>
+        public bool HasInteractableInFront()
+        {
+            Vector2Int targetCell = GridPosition + DirectionUtility.ToVector2Int(FacingDirection);
+
+            if (!gridMap.TryGetInteractable(targetCell, out IBoardInteractable interactable))
+            {
+                return false;
+            }
+
+            return interactable.CanInteract(this);
         }
 
         public void ExecutePendingIntent()

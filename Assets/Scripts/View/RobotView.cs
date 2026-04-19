@@ -15,18 +15,26 @@ namespace TuringSignal.View
         [SerializeField] private float moveDuration = 0.12f;
         [Header("Intent Arrow")]
         [SerializeField] private bool showIntentArrow = true;
+        [Tooltip("美术为竖直向上（+Y）的箭头；拖入后使用 Sprite 显示意图，否则使用程序画的 LineRenderer。")]
+        [SerializeField] private Sprite intentArrowSprite;
         [SerializeField] private float arrowVerticalOffset = 0.55f;
+        [SerializeField] private float arrowSpriteScale = 0.35f;
+        [Tooltip("沿意图方向在竖直偏移基础上的额外位移（世界单位，沿意图方向）。")]
+        [SerializeField] private float arrowSpriteForwardOffset = 0.2f;
+        [SerializeField] private Color moveIntentColor = Color.cyan;
+        [SerializeField] private Color interactIntentColor = Color.green;
+        [Header("Intent Arrow (程序化线条，无 Sprite 时使用)")]
         [SerializeField] private float arrowLength = 0.45f;
         [SerializeField] private float arrowHeadSize = 0.16f;
         [SerializeField] private float arrowWidth = 0.08f;
-        [SerializeField] private Color moveIntentColor = Color.cyan;
-        [SerializeField] private Color interactIntentColor = Color.green;
 
         private GridView gridView;
         private RobotLogic robotLogic;
         private Coroutine moveCoroutine;
         private LineRenderer intentArrowRenderer;
         private Material intentArrowMaterial;
+        private SpriteRenderer intentArrowSpriteRenderer;
+        private Transform intentArrowTransform;
         private bool isGoalLocked;
 
         public float MoveDuration => moveDuration;
@@ -52,7 +60,15 @@ namespace TuringSignal.View
 
             if (showIntentArrow)
             {
-                EnsureIntentArrowRenderer();
+                if (intentArrowSprite != null)
+                {
+                    EnsureIntentArrowSprite();
+                }
+                else
+                {
+                    EnsureIntentArrowRenderer();
+                }
+
                 HandleIntentChanged(this.robotLogic.PendingIntent);
             }
         }
@@ -65,6 +81,9 @@ namespace TuringSignal.View
             {
                 Destroy(intentArrowMaterial);
             }
+
+            intentArrowSpriteRenderer = null;
+            intentArrowTransform = null;
         }
 
         private void HandleMoveSucceeded(Vector2Int from, Vector2Int to)
@@ -100,33 +119,67 @@ namespace TuringSignal.View
                 return;
             }
 
-            EnsureIntentArrowRenderer();
-
-            Vector3 origin = new Vector3(0f, arrowVerticalOffset, 0f);
             Vector2Int intentVector = DirectionUtility.ToVector2Int(intent.Direction);
-            Vector3 direction = new Vector3(intentVector.x, intentVector.y, 0f).normalized;
+            Vector2 direction2 = new Vector2(intentVector.x, intentVector.y);
 
-            if (direction == Vector3.zero)
+            if (direction2.sqrMagnitude < 0.0001f)
             {
-                direction = Vector3.right;
+                direction2 = Vector2.right;
+            }
+            else
+            {
+                direction2.Normalize();
             }
 
-            Vector3 tip = origin + (direction * arrowLength);
-            Vector3 perpendicular = new Vector3(-direction.y, direction.x, 0f);
-            Vector3 leftHead = tip - (direction * arrowHeadSize) + (perpendicular * arrowHeadSize * 0.7f);
-            Vector3 rightHead = tip - (direction * arrowHeadSize) - (perpendicular * arrowHeadSize * 0.7f);
-
-            intentArrowRenderer.positionCount = 5;
-            intentArrowRenderer.SetPosition(0, origin);
-            intentArrowRenderer.SetPosition(1, tip);
-            intentArrowRenderer.SetPosition(2, leftHead);
-            intentArrowRenderer.SetPosition(3, tip);
-            intentArrowRenderer.SetPosition(4, rightHead);
-
             Color arrowColor = intent.Type == IntentType.Interact ? interactIntentColor : moveIntentColor;
-            intentArrowRenderer.startColor = arrowColor;
-            intentArrowRenderer.endColor = arrowColor;
-            intentArrowRenderer.enabled = true;
+
+            if (intentArrowSprite != null)
+            {
+                EnsureIntentArrowSprite();
+
+                if (intentArrowRenderer != null)
+                {
+                    intentArrowRenderer.enabled = false;
+                }
+
+                Vector3 baseOffset = new Vector3(0f, arrowVerticalOffset, 0f);
+                intentArrowTransform.localPosition = baseOffset + (Vector3)(direction2 * arrowSpriteForwardOffset);
+                float angleZ = Vector2.SignedAngle(Vector2.up, direction2);
+                intentArrowTransform.localRotation = Quaternion.Euler(0f, 0f, angleZ);
+                float s = Mathf.Max(0.01f, arrowSpriteScale);
+                intentArrowTransform.localScale = new Vector3(s, s, 1f);
+                intentArrowSpriteRenderer.sprite = intentArrowSprite;
+                intentArrowSpriteRenderer.color = arrowColor;
+                intentArrowSpriteRenderer.enabled = true;
+            }
+            else
+            {
+                if (intentArrowSpriteRenderer != null)
+                {
+                    intentArrowSpriteRenderer.enabled = false;
+                }
+
+                EnsureIntentArrowRenderer();
+
+                Vector3 origin = new Vector3(0f, arrowVerticalOffset, 0f);
+                Vector3 direction = new Vector3(direction2.x, direction2.y, 0f);
+
+                Vector3 tip = origin + (direction * arrowLength);
+                Vector3 perpendicular = new Vector3(-direction.y, direction.x, 0f);
+                Vector3 leftHead = tip - (direction * arrowHeadSize) + (perpendicular * arrowHeadSize * 0.7f);
+                Vector3 rightHead = tip - (direction * arrowHeadSize) - (perpendicular * arrowHeadSize * 0.7f);
+
+                intentArrowRenderer.positionCount = 5;
+                intentArrowRenderer.SetPosition(0, origin);
+                intentArrowRenderer.SetPosition(1, tip);
+                intentArrowRenderer.SetPosition(2, leftHead);
+                intentArrowRenderer.SetPosition(3, tip);
+                intentArrowRenderer.SetPosition(4, rightHead);
+
+                intentArrowRenderer.startColor = arrowColor;
+                intentArrowRenderer.endColor = arrowColor;
+                intentArrowRenderer.enabled = true;
+            }
         }
 
         private IEnumerator PlayMove(Vector3 targetPosition)
@@ -164,6 +217,11 @@ namespace TuringSignal.View
             if (intentArrowRenderer != null)
             {
                 intentArrowRenderer.enabled = false;
+            }
+
+            if (intentArrowSpriteRenderer != null)
+            {
+                intentArrowSpriteRenderer.enabled = false;
             }
 
             if (animator == null)
@@ -208,6 +266,20 @@ namespace TuringSignal.View
             }
 
             animator.SetBool(IsInteractingParameter, isInteracting);
+        }
+
+        private void EnsureIntentArrowSprite()
+        {
+            if (intentArrowSpriteRenderer != null)
+            {
+                return;
+            }
+
+            GameObject arrowObject = new GameObject("IntentArrowSprite");
+            arrowObject.transform.SetParent(transform, false);
+            intentArrowTransform = arrowObject.transform;
+            intentArrowSpriteRenderer = arrowObject.AddComponent<SpriteRenderer>();
+            intentArrowSpriteRenderer.sortingOrder = 10;
         }
 
         private void EnsureIntentArrowRenderer()

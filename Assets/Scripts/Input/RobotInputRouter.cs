@@ -16,11 +16,16 @@ namespace TuringSignal.Input
         private TickManager tickManager;
         private RobotLogic robotLogic;
         private bool inputEnabled = true;
+        private bool restrictInteractToFacingInteractable = true;
 
-        public void Initialize(TickManager tickManager, RobotLogic robotLogic)
+        public void Initialize(
+            TickManager tickManager,
+            RobotLogic robotLogic,
+            bool restrictInteractToFacingInteractable = true)
         {
             this.tickManager = tickManager;
             this.robotLogic = robotLogic;
+            this.restrictInteractToFacingInteractable = restrictInteractToFacingInteractable;
         }
 
         public void SetInputEnabled(bool isEnabled)
@@ -48,6 +53,11 @@ namespace TuringSignal.Input
 
             if (UnityEngine.Input.GetKeyDown(interactKey))
             {
+                if (restrictInteractToFacingInteractable && !robotLogic.HasInteractableInFront())
+                {
+                    return;
+                }
+
                 robotLogic.SetInteractIntent();
                 OnInteractPressed?.Invoke();
             }
