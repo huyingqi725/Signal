@@ -122,6 +122,37 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &204837608
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 204837609}
+  m_Layer: 0
+  m_Name: "\u989C\u8272\u5730\u56FE\u969C\u788D\u5C16\u523A\u989C\u82721"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &204837609
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 204837608}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 8.031911, y: 5.719434, z: 0.044811394}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &279468093
 GameObject:
   m_ObjectHideFlags: 0
@@ -158,7 +189,7 @@ MonoBehaviour:
   blockedCellColor: {r: 1, g: 0.2, b: 0.2, a: 0.45}
   spawnCellColor: {r: 0.2, g: 1, b: 0.6, a: 0.6}
   goalCellColor: {r: 1, g: 0.85, b: 0.2, a: 0.75}
-  trapCellColor: {r: 0.8, g: 0.35, b: 1, a: 0.55}
+  trapCellColor: {r: 0.8, g: 0.35, b: 1, a: 0}
   interactableCellColor: {r: 0, g: 0.24452256, b: 0.4932614, a: 0.75}
 --- !u!4 &279468095
 Transform:
@@ -204,8 +235,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: bb938e168ec9ca3418779c2f903d7d26, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  safeTrapSprite: {fileID: 21300000, guid: b47902fcf02a7ea4b980ad1cfed9f560, type: 3}
-  dangerTrapSprite: {fileID: 21300000, guid: 6c83b8689dd650e40937b0afeeb891a9, type: 3}
+  safeTrapSprite: {fileID: 21300000, guid: 8722dd024a176304292c3265a30320ac, type: 3}
+  dangerTrapSprite: {fileID: 21300000, guid: 6715c731a870f6f438d2a9033beb09b5, type: 3}
   worldOffset: {x: 0, y: 0, z: 0}
   sortingOrder: 2
 --- !u!4 &458993277
@@ -218,8 +249,8 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 7.7045565, y: 5.4893227, z: 0.04198365}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 3.5, y: 3.5, z: 3.5}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -482,9 +513,9 @@ MonoBehaviour:
   tickManager: {fileID: 1212644179}
   gridView: {fileID: 279468094}
   robotView: {fileID: 773918827}
-  trapView: {fileID: 0}
+  trapView: {fileID: 458993276}
   robotInputRouter: {fileID: 1065766128}
-  gameAudio: {fileID: 0}
+  gameAudio: {fileID: 616325088}
   gridWidth: 18
   gridHeight: 12
   robotSpawnGridPosition: {x: 1, y: 6}
@@ -541,16 +572,9 @@ MonoBehaviour:
   trapCells:
   - {x: 6, y: 7}
   - {x: 6, y: 6}
-  - {x: 4, y: 6}
-  - {x: 5, y: 6}
   - {x: 8, y: 7}
-  - {x: 8, y: 6}
-  - {x: 8, y: 5}
-  - {x: 11, y: 6}
   - {x: 11, y: 7}
-  - {x: 12, y: 7}
   - {x: 11, y: 5}
-  - {x: 14, y: 6}
   - {x: 15, y: 6}
   trapsStartActive: 1
   trapToggleIntervalTicks: 1
@@ -1363,9 +1387,10 @@ SceneRoots:
   - {fileID: 1212644180}
   - {fileID: 279468095}
   - {fileID: 773918828}
+  - {fileID: 458993277}
   - {fileID: 1065766129}
   - {fileID: 1420062604}
   - {fileID: 1689579616}
   - {fileID: 8251508169626948417}
   - {fileID: 616325089}
-  - {fileID: 458993277}
+  - {fileID: 204837609}

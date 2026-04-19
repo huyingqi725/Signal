@@ -17,6 +17,7 @@ namespace TuringSignal.Gameplay
         [SerializeField] private TickManager tickManager;
         [SerializeField] private GridView gridView;
         [SerializeField] private RobotView robotView;
+        [SerializeField] private GoalView goalView;
         [SerializeField] private TrapView trapView;
         [SerializeField] private RobotInputRouter robotInputRouter;
         [SerializeField] private GameAudio gameAudio;
@@ -119,6 +120,11 @@ namespace TuringSignal.Gameplay
                 robotView.Bind(gridView, robotLogic);
             }
 
+            if (goalView != null)
+            {
+                goalView.Initialize(gridView, goalGridPosition);
+            }
+
             if (trapView != null)
             {
                 trapView.Initialize(gridView, trapCells, areTrapsActive);
@@ -159,17 +165,22 @@ namespace TuringSignal.Gameplay
 
         private void HandleDecisionWindowStarted(int tickIndex)
         {
+            if (isTransitioning || isRestarting)
+            {
+                return;
+            }
+
             robotLogic.BeginDecisionWindow();
         }
 
         private void HandleTickExecuted(int tickIndex)
         {
-            robotLogic.ExecutePendingIntent();
-
             if (isTransitioning || isRestarting)
             {
                 return;
             }
+
+            robotLogic.ExecutePendingIntent();
 
             if (IsRobotOnActiveTrap())
             {
@@ -181,7 +192,8 @@ namespace TuringSignal.Gameplay
 
             if (robotLogic.GridPosition == goalGridPosition)
             {
-                LoadNextLevel();
+                StartGoalTransition();
+                return;
             }
 
             trapToggleTickCounter++;
@@ -390,7 +402,7 @@ namespace TuringSignal.Gameplay
                 GetInteractablePreviewCells());
         }
 
-        private void LoadNextLevel()
+        private void StartGoalTransition()
         {
             if (isTransitioning || isRestarting)
             {
@@ -398,6 +410,22 @@ namespace TuringSignal.Gameplay
             }
 
             isTransitioning = true;
+            if (robotInputRouter != null)
+            {
+                robotInputRouter.SetInputEnabled(false);
+            }
+
+            if (robotView != null)
+            {
+                robotView.EnterGoalIdleState();
+            }
+
+            if (goalView != null && robotView != null)
+            {
+                StartCoroutine(goalView.PlayGoalSequence(robotView.transform, robotView.MoveDuration, nextSceneName));
+                return;
+            }
+
             StartCoroutine(LoadNextLevelCoroutine());
         }
 

@@ -27,6 +27,9 @@ namespace TuringSignal.View
         private Coroutine moveCoroutine;
         private LineRenderer intentArrowRenderer;
         private Material intentArrowMaterial;
+        private bool isGoalLocked;
+
+        public float MoveDuration => moveDuration;
 
         public void Bind(GridView gridView, RobotLogic robotLogic)
         {
@@ -66,6 +69,11 @@ namespace TuringSignal.View
 
         private void HandleMoveSucceeded(Vector2Int from, Vector2Int to)
         {
+            if (isGoalLocked)
+            {
+                return;
+            }
+
             Vector3 targetPosition = gridView.GridToWorld(to);
             SetFacing(robotLogic.FacingDirection);
 
@@ -79,6 +87,11 @@ namespace TuringSignal.View
 
         private void HandleIntentChanged(RobotIntent intent)
         {
+            if (isGoalLocked)
+            {
+                return;
+            }
+
             SetFacing(intent.Direction);
             SetInteracting(intent.Type == IntentType.Interact);
 
@@ -133,6 +146,37 @@ namespace TuringSignal.View
             moveCoroutine = null;
         }
 
+        public void EnterGoalIdleState()
+        {
+            isGoalLocked = true;
+
+            if (moveCoroutine != null)
+            {
+                StopCoroutine(moveCoroutine);
+                moveCoroutine = null;
+            }
+
+            if (robotLogic != null && gridView != null)
+            {
+                transform.position = gridView.GridToWorld(robotLogic.GridPosition);
+            }
+
+            if (intentArrowRenderer != null)
+            {
+                intentArrowRenderer.enabled = false;
+            }
+
+            if (animator == null)
+            {
+                return;
+            }
+
+            animator.speed = 1f;
+            animator.Play(GetIdleStateName(robotLogic != null ? robotLogic.FacingDirection : Direction.Down), 0, 0f);
+            animator.Update(0f);
+            animator.speed = 0f;
+        }
+
         private void Unbind()
         {
             if (robotLogic != null)
@@ -143,6 +187,7 @@ namespace TuringSignal.View
 
             robotLogic = null;
             gridView = null;
+            isGoalLocked = false;
         }
 
         private void SetFacing(Direction direction)
@@ -194,6 +239,23 @@ namespace TuringSignal.View
             {
                 intentArrowMaterial = new Material(lineShader);
                 intentArrowRenderer.material = intentArrowMaterial;
+            }
+        }
+
+        private static string GetIdleStateName(Direction direction)
+        {
+            switch (direction)
+            {
+                case Direction.Up:
+                    return "Up 1";
+                case Direction.Right:
+                    return "Right 1";
+                case Direction.Down:
+                    return "Down 1";
+                case Direction.Left:
+                    return "Left 1";
+                default:
+                    return "Down 1";
             }
         }
     }

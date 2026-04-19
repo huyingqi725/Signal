@@ -11,7 +11,10 @@ namespace TuringSignal.Gameplay.Editor
         private SerializedProperty tickManagerProperty;
         private SerializedProperty gridViewProperty;
         private SerializedProperty robotViewProperty;
+        private SerializedProperty goalViewProperty;
+        private SerializedProperty trapViewProperty;
         private SerializedProperty robotInputRouterProperty;
+        private SerializedProperty gameAudioProperty;
         private SerializedProperty gridWidthProperty;
         private SerializedProperty gridHeightProperty;
         private SerializedProperty robotSpawnGridPositionProperty;
@@ -31,7 +34,10 @@ namespace TuringSignal.Gameplay.Editor
             tickManagerProperty = serializedObject.FindProperty("tickManager");
             gridViewProperty = serializedObject.FindProperty("gridView");
             robotViewProperty = serializedObject.FindProperty("robotView");
+            goalViewProperty = serializedObject.FindProperty("goalView");
+            trapViewProperty = serializedObject.FindProperty("trapView");
             robotInputRouterProperty = serializedObject.FindProperty("robotInputRouter");
+            gameAudioProperty = serializedObject.FindProperty("gameAudio");
             gridWidthProperty = serializedObject.FindProperty("gridWidth");
             gridHeightProperty = serializedObject.FindProperty("gridHeight");
             robotSpawnGridPositionProperty = serializedObject.FindProperty("robotSpawnGridPosition");
@@ -78,7 +84,10 @@ namespace TuringSignal.Gameplay.Editor
             EditorGUILayout.PropertyField(tickManagerProperty);
             EditorGUILayout.PropertyField(gridViewProperty);
             EditorGUILayout.PropertyField(robotViewProperty);
+            EditorGUILayout.PropertyField(goalViewProperty);
+            EditorGUILayout.PropertyField(trapViewProperty);
             EditorGUILayout.PropertyField(robotInputRouterProperty);
+            EditorGUILayout.PropertyField(gameAudioProperty);
         }
 
         private void DrawGridSetup()

@@ -1,0 +1,57 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &262224414760723254
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1282387858484515935}
+  - component: {fileID: 2188496445878304706}
+  m_Layer: 0
+  m_Name: GoalView
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1282387858484515935
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 262224414760723254}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 9.015272, y: 8.1269455, z: 0.051472876}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2188496445878304706
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 262224414760723254}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 57922794b3e8d9149b7e6d27fffd71a2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  defaultGoalSprite: {fileID: 21300000, guid: 4037212b22f2e1a41a89107635aae821, type: 3}
+  reachedGoalSprite: {fileID: 21300000, guid: 374d9084ab3e4c54d840d80ce62a4e2b, type: 3}
+  armSprite: {fileID: 21300000, guid: 1b6cb98c628af9a4bb6832aed4b87b1a, type: 3}
+  goalWorldOffset: {x: 0, y: 0, z: 0}
+  armOffset: {x: 0.45, y: 0.85, z: 0}
+  captureWorldOffset: {x: 4, y: 3, z: 0}
+  goalSortingOrder: 1
+  armSortingOrder: 5
+  armAppearDelay: 0.2
+  captureMoveDuration: 0.5
+  fadeDuration: 0.25

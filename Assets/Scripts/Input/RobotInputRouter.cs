@@ -15,6 +15,7 @@ namespace TuringSignal.Input
 
         private TickManager tickManager;
         private RobotLogic robotLogic;
+        private bool inputEnabled = true;
 
         public void Initialize(TickManager tickManager, RobotLogic robotLogic)
         {
@@ -22,9 +23,14 @@ namespace TuringSignal.Input
             this.robotLogic = robotLogic;
         }
 
+        public void SetInputEnabled(bool isEnabled)
+        {
+            inputEnabled = isEnabled;
+        }
+
         private void Update()
         {
-            if (tickManager == null || robotLogic == null)
+            if (!inputEnabled || tickManager == null || robotLogic == null)
             {
                 return;
             }
