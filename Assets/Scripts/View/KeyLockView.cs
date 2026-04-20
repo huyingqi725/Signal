@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using TuringSignal.Core.Data;
 using TuringSignal.Gameplay;
@@ -5,14 +6,51 @@ using TuringSignal.Gameplay;
 namespace TuringSignal.View
 {
     /// <summary>
+    /// Bind a scene-placed key prop to a logical key at <see cref="gridCell"/> + <see cref="keyColor"/>.
+    /// When set, this takes priority over <see cref="KeyLockView.redKeyWorldSprite"/> / blueKeyWorldSprite for that key.
+    /// The object is hidden when picked up (not destroyed).
+    /// </summary>
+    [Serializable]
+    public sealed class KeyWorldVisualOverride
+    {
+        [Tooltip("必须与 GameBootstrap 里该钥匙的格子坐标一致。")]
+        public Vector2Int gridCell;
+
+        public KeyColor keyColor;
+
+        [Tooltip("场景里摆好的物体（可含子物体 SpriteRenderer）。拾取后 SetActive(false)。")]
+        public Transform worldVisualRoot;
+    }
+
+    /// <summary>
+    /// Bind a scene-placed prop on the lock cell. Keep it inactive in the scene for an empty lock;
+    /// when the key is placed, the root is set active (opposite of key override).
+    /// </summary>
+    [Serializable]
+    public sealed class LockWorldVisualOverride
+    {
+        [Tooltip("必须与 GameBootstrap 里该锁的格子坐标一致。")]
+        public Vector2Int gridCell;
+
+        public KeyColor lockColor;
+
+        [Tooltip("场景里摆在锁格上的物体，默认隐藏；钥匙插入后 SetActive(true)。")]
+        public Transform worldVisualRoot;
+    }
+
+    /// <summary>
     /// Optional world / robot visuals for key–lock puzzle (sprites can be left null to skip).
     /// </summary>
     public sealed class KeyLockView : MonoBehaviour
     {
-        [Header("World — key on ground")]
+        [Header("World — key on ground (手动场景物体，优先)")]
+        [SerializeField] private KeyWorldVisualOverride[] keyWorldVisualOverrides = Array.Empty<KeyWorldVisualOverride>();
+        [Header("World — key on ground (程序生成，无 Override 匹配时使用)")]
         [SerializeField] private Sprite redKeyWorldSprite;
         [SerializeField] private Sprite blueKeyWorldSprite;
-        [Header("World — lock empty / filled")]
+        [Header("World — lock (手动场景物体，优先)")]
+        [SerializeField] private LockWorldVisualOverride[] lockWorldVisualOverrides = Array.Empty<LockWorldVisualOverride>();
+        [Header("World — lock empty / filled (程序生成，无 Override 匹配时使用)")]
         [SerializeField] private Sprite redLockEmptySprite;
         [SerializeField] private Sprite redLockFilledSprite;
         [SerializeField] private Sprite blueLockEmptySprite;
@@ -35,6 +73,7 @@ namespace TuringSignal.View
             public KeyItemLogic Logic;
             public SpriteRenderer Renderer;
             public Transform Transform;
+            public bool IsSceneProvided;
         }
 
         private sealed class LockVisual
@@ -42,6 +81,7 @@ namespace TuringSignal.View
             public LockItemLogic Logic;
             public SpriteRenderer Renderer;
             public Transform Transform;
+            public bool IsSceneProvided;
         }
 
         private KeyVisual[] keyVisuals = System.Array.Empty<KeyVisual>();
@@ -82,15 +122,26 @@ namespace TuringSignal.View
                 for (int i = 0; i < keys.Length; i++)
                 {
                     KeyItemLogic key = keys[i];
-                    Sprite sprite = key.Color == KeyColor.Red ? redKeyWorldSprite : blueKeyWorldSprite;
+                    Transform manualRoot = FindManualKeyWorldRoot(key);
 
                     KeyVisual kv = new KeyVisual
                     {
                         Logic = key,
-                        Transform = CreateWorldSprite($"Key_{key.Color}_{key.GridPosition}", sprite, key.GridPosition),
+                        IsSceneProvided = manualRoot != null,
                     };
 
-                    kv.Renderer = kv.Transform != null ? kv.Transform.GetComponent<SpriteRenderer>() : null;
+                    if (manualRoot != null)
+                    {
+                        kv.Transform = manualRoot;
+                        kv.Renderer = manualRoot.GetComponentInChildren<SpriteRenderer>(true);
+                    }
+                    else
+                    {
+                        Sprite sprite = key.Color == KeyColor.Red ? redKeyWorldSprite : blueKeyWorldSprite;
+                        kv.Transform = CreateWorldSprite($"Key_{key.Color}_{key.GridPosition}", sprite, key.GridPosition);
+                        kv.Renderer = kv.Transform != null ? kv.Transform.GetComponent<SpriteRenderer>() : null;
+                    }
+
                     key.OnPickedUp += HandleKeyPickedUp;
                     keyVisuals[i] = kv;
                     RefreshKeyWorld(key);
@@ -104,15 +155,26 @@ namespace TuringSignal.View
                 for (int i = 0; i < locks.Length; i++)
                 {
                     LockItemLogic lo = locks[i];
-                    Sprite sprite = GetLockSprite(lo.Color, lo.HasKeyPlaced);
+                    Transform manualLockRoot = FindManualLockWorldRoot(lo);
 
                     LockVisual lv = new LockVisual
                     {
                         Logic = lo,
-                        Transform = CreateWorldSprite($"Lock_{lo.Color}_{lo.GridPosition}", sprite, lo.GridPosition),
+                        IsSceneProvided = manualLockRoot != null,
                     };
 
-                    lv.Renderer = lv.Transform != null ? lv.Transform.GetComponent<SpriteRenderer>() : null;
+                    if (manualLockRoot != null)
+                    {
+                        lv.Transform = manualLockRoot;
+                        lv.Renderer = manualLockRoot.GetComponentInChildren<SpriteRenderer>(true);
+                    }
+                    else
+                    {
+                        Sprite sprite = GetLockSprite(lo.Color, lo.HasKeyPlaced);
+                        lv.Transform = CreateWorldSprite($"Lock_{lo.Color}_{lo.GridPosition}", sprite, lo.GridPosition);
+                        lv.Renderer = lv.Transform != null ? lv.Transform.GetComponent<SpriteRenderer>() : null;
+                    }
+
                     lo.OnKeyPlaced += HandleLockKeyPlaced;
                     lockVisuals[i] = lv;
                     RefreshLockWorld(lo);
@@ -140,7 +202,7 @@ namespace TuringSignal.View
                     keyVisuals[i].Logic.OnPickedUp -= HandleKeyPickedUp;
                 }
 
-                if (keyVisuals[i].Transform != null)
+                if (keyVisuals[i].Transform != null && !keyVisuals[i].IsSceneProvided)
                 {
                     Destroy(keyVisuals[i].Transform.gameObject);
                 }
@@ -155,7 +217,7 @@ namespace TuringSignal.View
                     lockVisuals[i].Logic.OnKeyPlaced -= HandleLockKeyPlaced;
                 }
 
-                if (lockVisuals[i].Transform != null)
+                if (lockVisuals[i].Transform != null && !lockVisuals[i].IsSceneProvided)
                 {
                     Destroy(lockVisuals[i].Transform.gameObject);
                 }
@@ -171,6 +233,56 @@ namespace TuringSignal.View
             }
 
             gridView = null;
+        }
+
+        private Transform FindManualKeyWorldRoot(KeyItemLogic key)
+        {
+            if (keyWorldVisualOverrides == null || keyWorldVisualOverrides.Length == 0)
+            {
+                return null;
+            }
+
+            for (int o = 0; o < keyWorldVisualOverrides.Length; o++)
+            {
+                KeyWorldVisualOverride entry = keyWorldVisualOverrides[o];
+
+                if (entry.worldVisualRoot == null)
+                {
+                    continue;
+                }
+
+                if (entry.gridCell == key.GridPosition && entry.keyColor == key.Color)
+                {
+                    return entry.worldVisualRoot;
+                }
+            }
+
+            return null;
+        }
+
+        private Transform FindManualLockWorldRoot(LockItemLogic lo)
+        {
+            if (lockWorldVisualOverrides == null || lockWorldVisualOverrides.Length == 0)
+            {
+                return null;
+            }
+
+            for (int o = 0; o < lockWorldVisualOverrides.Length; o++)
+            {
+                LockWorldVisualOverride entry = lockWorldVisualOverrides[o];
+
+                if (entry.worldVisualRoot == null)
+                {
+                    continue;
+                }
+
+                if (entry.gridCell == lo.GridPosition && entry.lockColor == lo.Color)
+                {
+                    return entry.worldVisualRoot;
+                }
+            }
+
+            return null;
         }
 
         private Transform CreateWorldSprite(string name, Sprite sprite, Vector2Int gridPosition)
@@ -218,7 +330,11 @@ namespace TuringSignal.View
                     continue;
                 }
 
-                if (keyVisuals[i].Renderer != null)
+                if (keyVisuals[i].IsSceneProvided && keyVisuals[i].Transform != null)
+                {
+                    keyVisuals[i].Transform.gameObject.SetActive(!key.IsPickedUp);
+                }
+                else if (keyVisuals[i].Renderer != null)
                 {
                     keyVisuals[i].Renderer.enabled = !key.IsPickedUp;
                 }
@@ -234,6 +350,12 @@ namespace TuringSignal.View
                 if (lockVisuals[i].Logic != lo)
                 {
                     continue;
+                }
+
+                if (lockVisuals[i].IsSceneProvided && lockVisuals[i].Transform != null)
+                {
+                    lockVisuals[i].Transform.gameObject.SetActive(lo.HasKeyPlaced);
+                    return;
                 }
 
                 SpriteRenderer r = lockVisuals[i].Renderer;

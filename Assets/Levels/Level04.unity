@@ -444,12 +444,15 @@ MonoBehaviour:
   animator: {fileID: 773918830}
   moveDuration: 0.12
   showIntentArrow: 1
+  intentArrowSprite: {fileID: 0}
   arrowVerticalOffset: 0.55
+  arrowSpriteScale: 0.35
+  arrowSpriteForwardOffset: 0.2
+  moveIntentColor: {r: 0, g: 1, b: 1, a: 1}
+  interactIntentColor: {r: 0, g: 1, b: 0, a: 1}
   arrowLength: 0.45
   arrowHeadSize: 0.16
   arrowWidth: 0.08
-  moveIntentColor: {r: 0, g: 1, b: 1, a: 1}
-  interactIntentColor: {r: 0, g: 1, b: 0, a: 1}
 --- !u!4 &773918828
 Transform:
   m_ObjectHideFlags: 0
@@ -867,6 +870,7 @@ MonoBehaviour:
   trapView: {fileID: 2128786680}
   robotInputRouter: {fileID: 1065766128}
   gameAudio: {fileID: 616325088}
+  keyLockView: {fileID: 0}
   gridWidth: 9
   gridHeight: 7
   robotSpawnGridPosition: {x: 0, y: 3}
@@ -920,6 +924,7 @@ MonoBehaviour:
   - {x: 3, y: 5}
   - {x: 3, y: 1}
   - {x: 3, y: 2}
+  restrictInteractToFacingInteractable: 1
   interactablePlacements: []
   restartDelay: 0.2
   trapDebugLogs: 1
@@ -967,7 +972,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 32bc47aacb32d1a4fb5244943c5e0b58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tickDuration: 0.7
+  tickDuration: 1
 --- !u!4 &1212644180
 Transform:
   m_ObjectHideFlags: 0

@@ -121,11 +121,13 @@ namespace TuringSignal.Gameplay
                     case InteractableRole.Key:
                         KeyItemLogic keyLogic = new KeyItemLogic(gridMap, placement.keyColor, pos);
                         keyList.Add(keyLogic);
+                        gridMap.SetWalkable(pos, false);
                         gridMap.SetInteractable(pos, keyLogic);
                         break;
                     case InteractableRole.Lock:
                         LockItemLogic lockLogic = new LockItemLogic(gridMap, placement.keyColor, pos);
                         lockList.Add(lockLogic);
+                        gridMap.SetWalkable(pos, false);
                         gridMap.SetInteractable(pos, lockLogic);
                         break;
                     default:
@@ -226,8 +228,10 @@ namespace TuringSignal.Gameplay
             Vector2Int robotCellAfter = robotLogic.GridPosition;
             int trapEvalTickIndex = GetTrapEvaluationTickIndex(tickIndex, intentForTick.Type);
             bool hitTrap = IsRobotOnActiveTrap(trapEvalTickIndex);
-            bool reachedGoal = robotLogic.GridPosition == goalGridPosition;
+            bool atGoalCell = robotLogic.GridPosition == goalGridPosition;
+            bool reachedGoal = atGoalCell && (!RequiresAllLocksForVictory || AreAllLocksFilled());
             LogTrapTickDebug(tickIndex, trapEvalTickIndex, intentForTick, robotCellBefore, robotCellAfter, hitTrap);
+            UpdateGridPreview();
             StartCoroutine(ResolveTickOutcomeAfterVisuals(tickIndex, hitTrap, reachedGoal));
         }
 
@@ -424,11 +428,76 @@ namespace TuringSignal.Gameplay
                 gridHeight,
                 clampedSpawnPosition,
                 clampedGoalPosition,
-                blockedCells,
+                GetBlockedCellsForPreview(),
                 oddTrapCells,
                 evenTrapCells,
                 Application.isPlaying ? displayedOddTrapPhaseActive : oddTrapPhaseForPreview,
                 GetInteractablePreviewCells());
+        }
+
+        private Vector2Int[] GetBlockedCellsForPreview()
+        {
+            HashSet<Vector2Int> set = new HashSet<Vector2Int>();
+
+            if (blockedCells != null)
+            {
+                for (int i = 0; i < blockedCells.Length; i++)
+                {
+                    set.Add(blockedCells[i]);
+                }
+            }
+
+            if (Application.isPlaying)
+            {
+                if (lockInteractables != null)
+                {
+                    for (int i = 0; i < lockInteractables.Length; i++)
+                    {
+                        if (lockInteractables[i] != null)
+                        {
+                            set.Add(lockInteractables[i].GridPosition);
+                        }
+                    }
+                }
+
+                if (keyInteractables != null)
+                {
+                    for (int i = 0; i < keyInteractables.Length; i++)
+                    {
+                        if (keyInteractables[i] != null)
+                        {
+                            set.Add(keyInteractables[i].GridPosition);
+                        }
+                    }
+                }
+            }
+            else if (interactablePlacements != null)
+            {
+                for (int i = 0; i < interactablePlacements.Length; i++)
+                {
+                    InteractablePlacement p = interactablePlacements[i];
+
+                    if (p == null)
+                    {
+                        continue;
+                    }
+
+                    if (p.role == InteractableRole.Key || p.role == InteractableRole.Lock)
+                    {
+                        set.Add(p.gridPosition);
+                    }
+                }
+            }
+
+            Vector2Int[] merged = new Vector2Int[set.Count];
+            int idx = 0;
+
+            foreach (Vector2Int c in set)
+            {
+                merged[idx++] = c;
+            }
+
+            return merged;
         }
 
         private void StartGoalTransition()
@@ -495,6 +564,32 @@ namespace TuringSignal.Gameplay
             return intentType == IntentType.Move ? executedTickIndex + 1 : executedTickIndex;
         }
 
+        /// <summary>
+        /// When the level defines at least one lock, victory requires every lock to have received its key
+        /// in addition to standing on the goal cell.
+        /// </summary>
+        private bool RequiresAllLocksForVictory => lockInteractables != null && lockInteractables.Length > 0;
+
+        private bool AreAllLocksFilled()
+        {
+            if (lockInteractables == null || lockInteractables.Length == 0)
+            {
+                return true;
+            }
+
+            for (int i = 0; i < lockInteractables.Length; i++)
+            {
+                LockItemLogic lo = lockInteractables[i];
+
+                if (lo != null && !lo.HasKeyPlaced)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
         private bool IsRobotOnActiveTrap(int tickIndex)
         {
             if (robotLogic == null)
@@ -547,36 +642,6 @@ namespace TuringSignal.Gameplay
                     }
                 }
 
-                if (keyInteractables != null)
-                {
-                    for (int i = 0; i < keyInteractables.Length; i++)
-                    {
-                        KeyItemLogic key = keyInteractables[i];
-
-                        if (key == null || key.IsPickedUp)
-                        {
-                            continue;
-                        }
-
-                        runtimeCells.Add(key.GridPosition);
-                    }
-                }
-
-                if (lockInteractables != null)
-                {
-                    for (int i = 0; i < lockInteractables.Length; i++)
-                    {
-                        LockItemLogic lo = lockInteractables[i];
-
-                        if (lo == null)
-                        {
-                            continue;
-                        }
-
-                        runtimeCells.Add(lo.GridPosition);
-                    }
-                }
-
                 if (runtimeCells.Count > 0)
                 {
                     return runtimeCells.ToArray();
@@ -588,14 +653,19 @@ namespace TuringSignal.Gameplay
                 return new Vector2Int[0];
             }
 
-            Vector2Int[] cells = new Vector2Int[interactablePlacements.Length];
+            List<Vector2Int> editorCells = new List<Vector2Int>();
 
             for (int i = 0; i < interactablePlacements.Length; i++)
             {
-                cells[i] = interactablePlacements[i].gridPosition;
+                InteractablePlacement p = interactablePlacements[i];
+
+                if (p != null && p.role == InteractableRole.GenericItem)
+                {
+                    editorCells.Add(p.gridPosition);
+                }
             }
 
-            return cells;
+            return editorCells.ToArray();
         }
 
         private void PlayDeathAudio()

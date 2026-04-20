@@ -49,6 +49,7 @@ namespace TuringSignal.Gameplay
 
             Direction nextDirection = DirectionUtility.RotateClockwise(PendingIntent.Direction);
             PendingIntent = RobotIntent.CreateMove(nextDirection);
+            FacingDirection = nextDirection;
             OnIntentChanged?.Invoke(PendingIntent);
         }
 
@@ -84,6 +85,7 @@ namespace TuringSignal.Gameplay
 
         /// <summary>
         /// True if the cell in front of the robot (same as <see cref="ExecuteInteract"/>) has an interactable that accepts interaction right now.
+        /// Uses <see cref="FacingDirection"/>, which is kept in sync with the move intent when rotating during the decision window.
         /// </summary>
         public bool HasInteractableInFront()
         {
