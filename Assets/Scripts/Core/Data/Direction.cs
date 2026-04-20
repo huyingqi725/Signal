@@ -45,5 +45,26 @@ namespace TuringSignal.Core.Data
                     return direction;
             }
         }
+
+        /// <summary>
+        /// For a baby lock: <paramref name="mouthOutward"/> is the direction the slot/opening points (开口朝向).
+        /// Returns the <see cref="Direction"/> the robot must face from the adjacent cell to interact into the lock.
+        /// </summary>
+        public static Direction RequiredRobotFacingForLockMouthOutward(Direction mouthOutward)
+        {
+            switch (mouthOutward)
+            {
+                case Direction.Down:
+                    return Direction.Up;
+                case Direction.Up:
+                    return Direction.Down;
+                case Direction.Left:
+                    return Direction.Right;
+                case Direction.Right:
+                    return Direction.Left;
+                default:
+                    return mouthOutward;
+            }
+        }
     }
 }

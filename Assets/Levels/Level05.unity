@@ -508,6 +508,7 @@ MonoBehaviour:
   - gridCell: {x: 6, y: 2}
     lockColor: 0
     worldVisualRoot: {fileID: 105218709}
+  babyLockWorldVisualOverrides: []
   redLockEmptySprite: {fileID: 21300000, guid: 36f88bac1773bd44eaf901ab9fb43b4a, type: 3}
   redLockFilledSprite: {fileID: 21300000, guid: a50de4e70f890ad4a81227fe5637e4db, type: 3}
   blueLockEmptySprite: {fileID: 21300000, guid: 12ba0c90b36b55440bb12e943c42586b, type: 3}
@@ -518,6 +519,8 @@ MonoBehaviour:
   redKeyHeldSprite: {fileID: 0}
   blueKeyHeldSprite: {fileID: 0}
   sortingOrder: 12
+  logBabyLockFillDiagnostics: 0
+  breakOnBabyLockFilled: 0
 --- !u!4 &271469648
 Transform:
   m_ObjectHideFlags: 0
@@ -830,7 +833,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bgmSource: {fileID: 2031484818}
   sfxSource: {fileID: 2029677816}
-  playBgm: {fileID: 8300000, guid: 20b0b90f0c569334a8cb2a9c3bb89c0b, type: 3}
+  playBgm: {fileID: 8300000, guid: 4cb9b769f33e043419f1fb4cf65dbb55, type: 3}
   botDeath: {fileID: 8300000, guid: d96694ce8f27df14388967717d7bd389, type: 3}
   botTurn: {fileID: 8300000, guid: 8db2beae857361142a5325e1e398bf23, type: 3}
   botWalk: {fileID: 8300000, guid: 001e29fc747598c41957bd40600a452e, type: 3}
@@ -1811,10 +1814,12 @@ MonoBehaviour:
   interactablePlacements:
   - role: 2
     keyColor: 0
+    babyLockInteractionFace: 0
     interactableId: Item_6_2
     gridPosition: {x: 6, y: 2}
   - role: 1
     keyColor: 0
+    babyLockInteractionFace: 0
     interactableId: Item_2_4
     gridPosition: {x: 2, y: 4}
   restartDelay: 0.2

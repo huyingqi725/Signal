@@ -60,6 +60,7 @@ namespace TuringSignal.Gameplay
         private GridItemLogic[] genericInteractables = new GridItemLogic[0];
         private KeyItemLogic[] keyInteractables = new KeyItemLogic[0];
         private LockItemLogic[] lockInteractables = new LockItemLogic[0];
+        private BabyLockItemLogic[] babyLockInteractables = new BabyLockItemLogic[0];
         private bool isRestarting;
         private bool isTransitioning;
         private bool displayedOddTrapPhaseActive;
@@ -110,6 +111,7 @@ namespace TuringSignal.Gameplay
             List<GridItemLogic> genericList = new List<GridItemLogic>();
             List<KeyItemLogic> keyList = new List<KeyItemLogic>();
             List<LockItemLogic> lockList = new List<LockItemLogic>();
+            List<BabyLockItemLogic> babyLockList = new List<BabyLockItemLogic>();
 
             for (int i = 0; i < interactablePlacements.Length; i++)
             {
@@ -130,6 +132,16 @@ namespace TuringSignal.Gameplay
                         gridMap.SetWalkable(pos, false);
                         gridMap.SetInteractable(pos, lockLogic);
                         break;
+                    case InteractableRole.BabyLock:
+                        BabyLockItemLogic babyLockLogic = new BabyLockItemLogic(
+                            gridMap,
+                            placement.keyColor,
+                            pos,
+                            placement.babyLockInteractionFace);
+                        babyLockList.Add(babyLockLogic);
+                        gridMap.SetWalkable(pos, false);
+                        gridMap.SetInteractable(pos, babyLockLogic);
+                        break;
                     default:
                         GridItemLogic itemLogic = new GridItemLogic(gridMap, placement.interactableId, pos);
                         genericList.Add(itemLogic);
@@ -141,6 +153,7 @@ namespace TuringSignal.Gameplay
             genericInteractables = genericList.ToArray();
             keyInteractables = keyList.ToArray();
             lockInteractables = lockList.ToArray();
+            babyLockInteractables = babyLockList.ToArray();
 
             Vector2Int clampedSpawnPosition = new Vector2Int(
                 Mathf.Clamp(robotSpawnGridPosition.x, 0, gridWidth - 1),
@@ -158,7 +171,7 @@ namespace TuringSignal.Gameplay
 
             if (keyLockView != null && gridView != null && robotView != null)
             {
-                keyLockView.Initialize(gridView, robotView.transform, robotLogic, keyInteractables, lockInteractables);
+                keyLockView.Initialize(gridView, robotView.transform, robotLogic, keyInteractables, lockInteractables, babyLockInteractables);
             }
 
             if (goalView != null)
@@ -470,6 +483,17 @@ namespace TuringSignal.Gameplay
                         }
                     }
                 }
+
+                if (babyLockInteractables != null)
+                {
+                    for (int i = 0; i < babyLockInteractables.Length; i++)
+                    {
+                        if (babyLockInteractables[i] != null)
+                        {
+                            set.Add(babyLockInteractables[i].GridPosition);
+                        }
+                    }
+                }
             }
             else if (interactablePlacements != null)
             {
@@ -482,7 +506,7 @@ namespace TuringSignal.Gameplay
                         continue;
                     }
 
-                    if (p.role == InteractableRole.Key || p.role == InteractableRole.Lock)
+                    if (p.role == InteractableRole.Key || p.role == InteractableRole.Lock || p.role == InteractableRole.BabyLock)
                     {
                         set.Add(p.gridPosition);
                     }
@@ -568,22 +592,35 @@ namespace TuringSignal.Gameplay
         /// When the level defines at least one lock, victory requires every lock to have received its key
         /// in addition to standing on the goal cell.
         /// </summary>
-        private bool RequiresAllLocksForVictory => lockInteractables != null && lockInteractables.Length > 0;
+        private bool RequiresAllLocksForVictory =>
+            (lockInteractables != null && lockInteractables.Length > 0)
+            || (babyLockInteractables != null && babyLockInteractables.Length > 0);
 
         private bool AreAllLocksFilled()
         {
-            if (lockInteractables == null || lockInteractables.Length == 0)
+            if (lockInteractables != null)
             {
-                return true;
+                for (int i = 0; i < lockInteractables.Length; i++)
+                {
+                    LockItemLogic lo = lockInteractables[i];
+
+                    if (lo != null && !lo.HasKeyPlaced)
+                    {
+                        return false;
+                    }
+                }
             }
 
-            for (int i = 0; i < lockInteractables.Length; i++)
+            if (babyLockInteractables != null)
             {
-                LockItemLogic lo = lockInteractables[i];
-
-                if (lo != null && !lo.HasKeyPlaced)
+                for (int i = 0; i < babyLockInteractables.Length; i++)
                 {
-                    return false;
+                    BabyLockItemLogic baby = babyLockInteractables[i];
+
+                    if (baby != null && !baby.HasKeyPlaced)
+                    {
+                        return false;
+                    }
                 }
             }
 

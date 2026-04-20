@@ -263,8 +263,8 @@ namespace TuringSignal.Gameplay.Editor
             }
 
             EditorGUILayout.HelpBox(
-                "点击格子循环：空 → 通用 I → 红钥匙 KR → 蓝钥匙 KB → 红锁 LR → 蓝锁 LB → 删除。" +
-                "机器人身上已有钥匙时不能再交互其它物体，必须把钥匙放进同色锁。" +
+                "点击格子循环：空→I→KR→KB→LR→LB→婴儿锁(红U→红R→…→蓝L)→删。婴儿锁标签 BRU=红+面朝上。" +
+                "机器人身上已有钥匙时不能再交互其它物体，必须把钥匙放进同色锁/婴儿锁。" +
                 "勾选上方限制开关时，仅当前方有可交互物时才能按 E。",
                 MessageType.None);
 
@@ -428,6 +428,30 @@ namespace TuringSignal.Gameplay.Editor
             return -1;
         }
 
+        private static char BabyLockFaceLetter(SerializedProperty placement)
+        {
+            SerializedProperty faceProp = placement.FindPropertyRelative("babyLockInteractionFace");
+
+            if (faceProp == null)
+            {
+                return '?';
+            }
+
+            switch ((Direction)faceProp.enumValueIndex)
+            {
+                case Direction.Up:
+                    return 'U';
+                case Direction.Right:
+                    return 'R';
+                case Direction.Down:
+                    return 'D';
+                case Direction.Left:
+                    return 'L';
+                default:
+                    return '?';
+            }
+        }
+
         private static string GetInteractableLabelForPlacement(SerializedProperty placement)
         {
             SerializedProperty roleProp = placement.FindPropertyRelative("role");
@@ -441,6 +465,8 @@ namespace TuringSignal.Gameplay.Editor
                     return color == KeyColor.Red ? "KR" : "KB";
                 case InteractableRole.Lock:
                     return color == KeyColor.Red ? "LR" : "LB";
+                case InteractableRole.BabyLock:
+                    return (color == KeyColor.Red ? "BR" : "BB") + BabyLockFaceLetter(placement);
                 default:
                     return "I";
             }
@@ -479,6 +505,11 @@ namespace TuringSignal.Gameplay.Editor
             if (role == InteractableRole.Lock)
             {
                 return color == KeyColor.Red ? new Color(0.75f, 0.2f, 0.2f) : new Color(0.2f, 0.35f, 0.75f);
+            }
+
+            if (role == InteractableRole.BabyLock)
+            {
+                return color == KeyColor.Red ? new Color(0.95f, 0.55f, 0.25f) : new Color(0.25f, 0.65f, 0.75f);
             }
 
             return new Color(0.25f, 0.75f, 0.95f);
@@ -527,6 +558,36 @@ namespace TuringSignal.Gameplay.Editor
             if (role == InteractableRole.Lock && color == KeyColor.Red)
             {
                 placement.FindPropertyRelative("keyColor").enumValueIndex = (int)KeyColor.Blue;
+                return;
+            }
+
+            if (role == InteractableRole.Lock && color == KeyColor.Blue)
+            {
+                placement.FindPropertyRelative("role").enumValueIndex = (int)InteractableRole.BabyLock;
+                placement.FindPropertyRelative("keyColor").enumValueIndex = (int)KeyColor.Red;
+                placement.FindPropertyRelative("babyLockInteractionFace").enumValueIndex = (int)Direction.Up;
+                return;
+            }
+
+            if (role == InteractableRole.BabyLock)
+            {
+                SerializedProperty faceProp = placement.FindPropertyRelative("babyLockInteractionFace");
+
+                if (faceProp.enumValueIndex < (int)Direction.Left)
+                {
+                    faceProp.enumValueIndex = faceProp.enumValueIndex + 1;
+                    return;
+                }
+
+                faceProp.enumValueIndex = (int)Direction.Up;
+
+                if (color == KeyColor.Red)
+                {
+                    placement.FindPropertyRelative("keyColor").enumValueIndex = (int)KeyColor.Blue;
+                    return;
+                }
+
+                interactablePlacementsProperty.DeleteArrayElementAtIndex(index);
                 return;
             }
 

@@ -4,6 +4,7 @@ namespace TuringSignal.Gameplay
     {
         GenericItem = 0,
         Key = 1,
-        Lock = 2
+        Lock = 2,
+        BabyLock = 3
     }
 }

@@ -388,7 +388,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bgmSource: {fileID: 2031484818}
   sfxSource: {fileID: 2029677816}
-  playBgm: {fileID: 8300000, guid: 20b0b90f0c569334a8cb2a9c3bb89c0b, type: 3}
+  playBgm: {fileID: 8300000, guid: 4cb9b769f33e043419f1fb4cf65dbb55, type: 3}
   botDeath: {fileID: 8300000, guid: d96694ce8f27df14388967717d7bd389, type: 3}
   botTurn: {fileID: 8300000, guid: 8db2beae857361142a5325e1e398bf23, type: 3}
   botWalk: {fileID: 8300000, guid: 001e29fc747598c41957bd40600a452e, type: 3}

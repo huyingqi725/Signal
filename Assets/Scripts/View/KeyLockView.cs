@@ -39,6 +39,24 @@ namespace TuringSignal.View
     }
 
     /// <summary>
+    /// Scene override for a <see cref="BabyLockItemLogic"/>; match grid, color, and the lock opening direction (与 InteractablePlacement.babyLockInteractionFace 相同：开口朝向).
+    /// </summary>
+    [Serializable]
+    public sealed class BabyLockWorldVisualOverride
+    {
+        [Tooltip("必须与 GameBootstrap 里该婴儿锁的格子坐标一致。")]
+        public Vector2Int gridCell;
+
+        public KeyColor lockColor;
+
+        [Tooltip("与关卡里婴儿锁的开口朝向一致（mouth outward），不是机器人朝向。")]
+        public Direction interactionFace;
+
+        [Tooltip("场景里摆在锁格上的物体，默认隐藏；钥匙插入后 SetActive(true)。")]
+        public Transform worldVisualRoot;
+    }
+
+    /// <summary>
     /// Optional world / robot visuals for key–lock puzzle (sprites can be left null to skip).
     /// </summary>
     public sealed class KeyLockView : MonoBehaviour
@@ -50,6 +68,8 @@ namespace TuringSignal.View
         [SerializeField] private Sprite blueKeyWorldSprite;
         [Header("World — lock (手动场景物体，优先)")]
         [SerializeField] private LockWorldVisualOverride[] lockWorldVisualOverrides = Array.Empty<LockWorldVisualOverride>();
+        [Header("World — baby lock (手动场景物体，优先)")]
+        [SerializeField] private BabyLockWorldVisualOverride[] babyLockWorldVisualOverrides = Array.Empty<BabyLockWorldVisualOverride>();
         [Header("World — lock empty / filled (程序生成，无 Override 匹配时使用)")]
         [SerializeField] private Sprite redLockEmptySprite;
         [SerializeField] private Sprite redLockFilledSprite;
@@ -62,6 +82,11 @@ namespace TuringSignal.View
         [SerializeField] private Sprite redKeyHeldSprite;
         [SerializeField] private Sprite blueKeyHeldSprite;
         [SerializeField] private int sortingOrder = 12;
+        [Header("Debug — BabyLock")]
+        [Tooltip("勾选后：婴儿锁逻辑层成功插钥匙会打 [BabyLockLogic]；视图刷新会打 [BabyLockView]。")]
+        [SerializeField] private bool logBabyLockFillDiagnostics;
+        [Tooltip("勾选后：收到婴儿锁填充回调时调用 Debug.Break()（编辑器暂停，等同断点）。需勾选后再进入 Play。")]
+        [SerializeField] private bool breakOnBabyLockFilled;
 
         private GridView gridView;
         private RobotLogic subscribedRobot;
@@ -84,17 +109,29 @@ namespace TuringSignal.View
             public bool IsSceneProvided;
         }
 
+        private sealed class BabyLockVisual
+        {
+            public BabyLockItemLogic Logic;
+            public SpriteRenderer Renderer;
+            public Transform Transform;
+            public bool IsSceneProvided;
+        }
+
         private KeyVisual[] keyVisuals = System.Array.Empty<KeyVisual>();
         private LockVisual[] lockVisuals = System.Array.Empty<LockVisual>();
+        private BabyLockVisual[] babyLockVisuals = System.Array.Empty<BabyLockVisual>();
 
         public void Initialize(
             GridView gridView,
             Transform robotRoot,
             RobotLogic robotLogic,
             KeyItemLogic[] keys,
-            LockItemLogic[] locks)
+            LockItemLogic[] locks,
+            BabyLockItemLogic[] babyLocks)
         {
             Shutdown();
+
+            BabyLockItemLogic.DiagnosticsEnabled = logBabyLockFillDiagnostics;
 
             this.gridView = gridView;
             subscribedRobot = robotLogic;
@@ -180,6 +217,39 @@ namespace TuringSignal.View
                     RefreshLockWorld(lo);
                 }
             }
+
+            if (babyLocks != null && babyLocks.Length > 0)
+            {
+                babyLockVisuals = new BabyLockVisual[babyLocks.Length];
+
+                for (int i = 0; i < babyLocks.Length; i++)
+                {
+                    BabyLockItemLogic baby = babyLocks[i];
+                    Transform manualRoot = FindManualBabyLockWorldRoot(baby);
+
+                    BabyLockVisual bv = new BabyLockVisual
+                    {
+                        Logic = baby,
+                        IsSceneProvided = manualRoot != null,
+                    };
+
+                    if (manualRoot != null)
+                    {
+                        bv.Transform = manualRoot;
+                        bv.Renderer = manualRoot.GetComponentInChildren<SpriteRenderer>(true);
+                    }
+                    else
+                    {
+                        Sprite sprite = GetLockSprite(baby.Color, baby.HasKeyPlaced);
+                        bv.Transform = CreateWorldSprite($"BabyLock_{baby.Color}_{baby.InteractionFace}_{baby.GridPosition}", sprite, baby.GridPosition);
+                        bv.Renderer = bv.Transform != null ? bv.Transform.GetComponent<SpriteRenderer>() : null;
+                    }
+
+                    baby.OnKeyPlaced += HandleBabyLockKeyPlaced;
+                    babyLockVisuals[i] = bv;
+                    RefreshBabyLockWorld(baby);
+                }
+            }
         }
 
         private void OnDestroy()
@@ -224,6 +294,23 @@ namespace TuringSignal.View
             }
 
             lockVisuals = System.Array.Empty<LockVisual>();
+
+            for (int i = 0; i < babyLockVisuals.Length; i++)
+            {
+                if (babyLockVisuals[i].Logic != null)
+                {
+                    babyLockVisuals[i].Logic.OnKeyPlaced -= HandleBabyLockKeyPlaced;
+                }
+
+                if (babyLockVisuals[i].Transform != null && !babyLockVisuals[i].IsSceneProvided)
+                {
+                    Destroy(babyLockVisuals[i].Transform.gameObject);
+                }
+            }
+
+            babyLockVisuals = System.Array.Empty<BabyLockVisual>();
+
+            BabyLockItemLogic.DiagnosticsEnabled = false;
 
             if (heldKeyTransform != null)
             {
@@ -285,6 +372,33 @@ namespace TuringSignal.View
             return null;
         }
 
+        private Transform FindManualBabyLockWorldRoot(BabyLockItemLogic baby)
+        {
+            if (babyLockWorldVisualOverrides == null || babyLockWorldVisualOverrides.Length == 0)
+            {
+                return null;
+            }
+
+            for (int o = 0; o < babyLockWorldVisualOverrides.Length; o++)
+            {
+                BabyLockWorldVisualOverride entry = babyLockWorldVisualOverrides[o];
+
+                if (entry.worldVisualRoot == null)
+                {
+                    continue;
+                }
+
+                if (entry.gridCell == baby.GridPosition
+                    && entry.lockColor == baby.Color
+                    && entry.interactionFace == baby.InteractionFace)
+                {
+                    return entry.worldVisualRoot;
+                }
+            }
+
+            return null;
+        }
+
         private Transform CreateWorldSprite(string name, Sprite sprite, Vector2Int gridPosition)
         {
             if (sprite == null || gridView == null)
@@ -319,6 +433,23 @@ namespace TuringSignal.View
         private void HandleLockKeyPlaced(LockItemLogic lo)
         {
             RefreshLockWorld(lo);
+        }
+
+        private void HandleBabyLockKeyPlaced(BabyLockItemLogic baby)
+        {
+            if (breakOnBabyLockFilled)
+            {
+                Debug.Break();
+            }
+
+            if (logBabyLockFillDiagnostics)
+            {
+                Debug.Log(
+                    $"[BabyLockView] OnKeyPlaced callback — grid={baby.GridPosition} color={baby.Color} face={baby.InteractionFace} " +
+                    $"HasKeyPlaced={baby.HasKeyPlaced}");
+            }
+
+            RefreshBabyLockWorld(baby);
         }
 
         private void RefreshKeyWorld(KeyItemLogic key)
@@ -374,6 +505,68 @@ namespace TuringSignal.View
 
                 r.enabled = sprite != null;
                 return;
+            }
+        }
+
+        private void RefreshBabyLockWorld(BabyLockItemLogic baby)
+        {
+            for (int i = 0; i < babyLockVisuals.Length; i++)
+            {
+                if (babyLockVisuals[i].Logic != baby)
+                {
+                    continue;
+                }
+
+                if (babyLockVisuals[i].IsSceneProvided && babyLockVisuals[i].Transform != null)
+                {
+                    bool show = baby.HasKeyPlaced;
+                    babyLockVisuals[i].Transform.gameObject.SetActive(show);
+
+                    if (logBabyLockFillDiagnostics)
+                    {
+                        Debug.Log(
+                            $"[BabyLockView] Refresh — scene override root={babyLockVisuals[i].Transform.name} SetActive({show})");
+                    }
+
+                    return;
+                }
+
+                SpriteRenderer r = babyLockVisuals[i].Renderer;
+
+                if (r == null)
+                {
+                    if (logBabyLockFillDiagnostics)
+                    {
+                        Debug.LogWarning(
+                            $"[BabyLockView] Refresh — no SpriteRenderer (programmatic child missing?). grid={baby.GridPosition}");
+                    }
+
+                    return;
+                }
+
+                Sprite sprite = GetLockSprite(baby.Color, baby.HasKeyPlaced);
+
+                if (logBabyLockFillDiagnostics)
+                {
+                    Debug.Log(
+                        $"[BabyLockView] Refresh — sprite path color={baby.Color} filled={baby.HasKeyPlaced} " +
+                        $"sprite={(sprite != null ? sprite.name : "null")} enabledWillBe={sprite != null}");
+                }
+
+                if (sprite != null)
+                {
+                    r.sprite = sprite;
+                }
+
+                r.enabled = sprite != null;
+                return;
+            }
+
+            if (logBabyLockFillDiagnostics)
+            {
+                Debug.LogWarning(
+                    $"[BabyLockView] Refresh — no matching babyLockVisuals slot for grid={baby.GridPosition} " +
+                    $"(KeyLockView.Initialize 时婴儿锁数量与当前不一致，或本组件未绑定到 GameBootstrap 的 Key Lock View。)");
             }
         }
 
