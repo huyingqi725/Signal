@@ -247,24 +247,26 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   keyWorldVisualOverrides:
-  - gridCell: {x: 1, y: 5}
+  - gridCell: {x: 7, y: 1}
     keyColor: 1
     worldVisualRoot: {fileID: 2012482622}
-  - gridCell: {x: 3, y: 2}
+  - gridCell: {x: 3, y: 5}
     keyColor: 0
     worldVisualRoot: {fileID: 1394550308}
   redKeyWorldSprite: {fileID: 0}
   blueKeyWorldSprite: {fileID: 0}
   lockWorldVisualOverrides: []
   babyLockWorldVisualOverrides:
-  - gridCell: {x: 7, y: 1}
-    lockColor: 1
-    interactionFace: 3
-    worldVisualRoot: {fileID: 0}
-  - gridCell: {x: 5, y: 4}
+  - gridCell: {x: 5, y: 1}
     lockColor: 0
+    interactionFace: 0
+    idleBabyWorldRoot: {fileID: 1851353786}
+    worldVisualRoot: {fileID: 703303091}
+  - gridCell: {x: 5, y: 5}
+    lockColor: 1
     interactionFace: 1
-    worldVisualRoot: {fileID: 0}
+    idleBabyWorldRoot: {fileID: 1470458527}
+    worldVisualRoot: {fileID: 1183699795}
   redLockEmptySprite: {fileID: 21300000, guid: 36f88bac1773bd44eaf901ab9fb43b4a, type: 3}
   redLockFilledSprite: {fileID: 21300000, guid: a50de4e70f890ad4a81227fe5637e4db, type: 3}
   blueLockEmptySprite: {fileID: 21300000, guid: 12ba0c90b36b55440bb12e943c42586b, type: 3}
@@ -603,7 +605,7 @@ MonoBehaviour:
   moveDuration: 0.12
   showIntentArrow: 1
   intentArrowSprite: {fileID: 21300000, guid: 517ae3dea97221f449f3b10ce44f6e95, type: 3}
-  arrowVerticalOffset: 0.55
+  arrowVerticalOffset: 1.08
   arrowSpriteScale: 0.35
   arrowSpriteForwardOffset: 0.2
   moveIntentColor: {r: 0, g: 1, b: 1, a: 1}
@@ -667,7 +669,7 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 2
-  m_Sprite: {fileID: 21300000, guid: e6788e8472eb3f945963590ed3f0bb93, type: 3}
+  m_Sprite: {fileID: -612520913, guid: c53837adf07bd2e4980d9b3464310bd3, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
@@ -1039,7 +1041,7 @@ MonoBehaviour:
   robotSpawnGridPosition: {x: 0, y: 3}
   robotSpawnDirection: 1
   goalGridPosition: {x: 8, y: 3}
-  nextSceneName: Level10
+  nextSceneName: WinScene
   nextLevelDelay: 0.3
   blockedCells:
   - {x: 0, y: 0}
@@ -1077,7 +1079,6 @@ MonoBehaviour:
   oddTrapCells:
   - {x: 3, y: 3}
   - {x: 5, y: 3}
-  - {x: 7, y: 3}
   evenTrapCells:
   - {x: 2, y: 2}
   - {x: 2, y: 3}
@@ -1089,7 +1090,27 @@ MonoBehaviour:
   - {x: 4, y: 2}
   - {x: 4, y: 4}
   restrictInteractToFacingInteractable: 1
-  interactablePlacements: []
+  interactablePlacements:
+  - role: 1
+    keyColor: 1
+    babyLockInteractionFace: 0
+    interactableId: Item_7_1
+    gridPosition: {x: 7, y: 1}
+  - role: 1
+    keyColor: 0
+    babyLockInteractionFace: 0
+    interactableId: Item_3_5
+    gridPosition: {x: 3, y: 5}
+  - role: 3
+    keyColor: 1
+    babyLockInteractionFace: 1
+    interactableId: Item_5_5
+    gridPosition: {x: 5, y: 5}
+  - role: 3
+    keyColor: 0
+    babyLockInteractionFace: 0
+    interactableId: Item_5_1
+    gridPosition: {x: 5, y: 1}
   restartDelay: 0.2
   trapDebugLogs: 0
 --- !u!4 &1168881214
@@ -1368,12 +1389,12 @@ SpriteRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: -3
-  m_Sprite: {fileID: 21300000, guid: 9c9fb899f0a75bf4398eaa4f6135f51d, type: 3}
+  m_Sprite: {fileID: 21300000, guid: bbeedeb0abd14e64eba195660a1485ad, type: 3}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_FlipX: 0
   m_FlipY: 0
   m_DrawMode: 0
-  m_Size: {x: 28.353455, y: 18.869999}
+  m_Size: {x: 9, y: 7}
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
@@ -1925,6 +1946,90 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: -0.734, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1831143462
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1831143464}
+  - component: {fileID: 1831143463}
+  m_Layer: 0
+  m_Name: "\u8FB9\u6846(2)"
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!212 &1831143463
+SpriteRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1831143462}
+  m_Enabled: 1
+  m_CastShadows: 0
+  m_ReceiveShadows: 0
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 0
+  m_RayTraceProcedural: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: a97c105638bdf8b4a8650670310a4cd3, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 0
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_Sprite: {fileID: 21300000, guid: b01da97a0527b4b40ad2b67f96476186, type: 3}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_FlipX: 0
+  m_FlipY: 0
+  m_DrawMode: 0
+  m_Size: {x: 17.066668, y: 9.6}
+  m_AdaptiveModeThreshold: 0.5
+  m_SpriteTileMode: 0
+  m_WasSpriteAssigned: 1
+  m_MaskInteraction: 0
+  m_SpriteSortPoint: 0
+--- !u!4 &1831143464
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1831143462}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: -0.69, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -2933,3 +3038,4 @@ SceneRoots:
   - {fileID: 703303091}
   - {fileID: 1470458527}
   - {fileID: 1183699795}
+  - {fileID: 1831143464}

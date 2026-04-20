@@ -39,7 +39,8 @@ namespace TuringSignal.View
     }
 
     /// <summary>
-    /// Scene override for a <see cref="BabyLockItemLogic"/>; match grid, color, and the lock opening direction (与 InteractablePlacement.babyLockInteractionFace 相同：开口朝向).
+    /// Scene override for a <see cref="BabyLockItemLogic"/>; match grid, color, and opening direction (与 InteractablePlacement.babyLockInteractionFace 相同).
+    /// Optional <see cref="idleBabyWorldRoot"/> hides the pre-fill scene baby when the key is placed.
     /// </summary>
     [Serializable]
     public sealed class BabyLockWorldVisualOverride
@@ -51,6 +52,9 @@ namespace TuringSignal.View
 
         [Tooltip("与关卡里婴儿锁的开口朝向一致（mouth outward），不是机器人朝向。")]
         public Direction interactionFace;
+
+        [Tooltip("未插钥匙时显示的场景婴儿；插钥匙后 SetActive(false)。拖入该婴儿根物体或含 Sprite 的父物体。")]
+        public Transform idleBabyWorldRoot;
 
         [Tooltip("场景里摆在锁格上的物体，默认隐藏；钥匙插入后 SetActive(true)。")]
         public Transform worldVisualRoot;
@@ -115,6 +119,7 @@ namespace TuringSignal.View
             public SpriteRenderer Renderer;
             public Transform Transform;
             public bool IsSceneProvided;
+            public Transform IdleBabyWorldRoot;
         }
 
         private KeyVisual[] keyVisuals = System.Array.Empty<KeyVisual>();
@@ -225,11 +230,12 @@ namespace TuringSignal.View
                 for (int i = 0; i < babyLocks.Length; i++)
                 {
                     BabyLockItemLogic baby = babyLocks[i];
-                    Transform manualRoot = FindManualBabyLockWorldRoot(baby);
+                    TryGetBabyLockWorldOverride(baby, out Transform manualRoot, out Transform idleBabyRoot);
 
                     BabyLockVisual bv = new BabyLockVisual
                     {
                         Logic = baby,
+                        IdleBabyWorldRoot = idleBabyRoot,
                         IsSceneProvided = manualRoot != null,
                     };
 
@@ -372,31 +378,32 @@ namespace TuringSignal.View
             return null;
         }
 
-        private Transform FindManualBabyLockWorldRoot(BabyLockItemLogic baby)
+        private void TryGetBabyLockWorldOverride(
+            BabyLockItemLogic baby,
+            out Transform filledWorldRoot,
+            out Transform idleBabyWorldRoot)
         {
+            filledWorldRoot = null;
+            idleBabyWorldRoot = null;
+
             if (babyLockWorldVisualOverrides == null || babyLockWorldVisualOverrides.Length == 0)
             {
-                return null;
+                return;
             }
 
             for (int o = 0; o < babyLockWorldVisualOverrides.Length; o++)
             {
                 BabyLockWorldVisualOverride entry = babyLockWorldVisualOverrides[o];
 
-                if (entry.worldVisualRoot == null)
-                {
-                    continue;
-                }
-
                 if (entry.gridCell == baby.GridPosition
                     && entry.lockColor == baby.Color
                     && entry.interactionFace == baby.InteractionFace)
                 {
-                    return entry.worldVisualRoot;
+                    filledWorldRoot = entry.worldVisualRoot;
+                    idleBabyWorldRoot = entry.idleBabyWorldRoot;
+                    return;
                 }
             }
-
-            return null;
         }
 
         private Transform CreateWorldSprite(string name, Sprite sprite, Vector2Int gridPosition)
@@ -515,6 +522,18 @@ namespace TuringSignal.View
                 if (babyLockVisuals[i].Logic != baby)
                 {
                     continue;
+                }
+
+                if (babyLockVisuals[i].IdleBabyWorldRoot != null)
+                {
+                    babyLockVisuals[i].IdleBabyWorldRoot.gameObject.SetActive(!baby.HasKeyPlaced);
+
+                    if (logBabyLockFillDiagnostics)
+                    {
+                        Debug.Log(
+                            $"[BabyLockView] Refresh — idleBabyWorldRoot={babyLockVisuals[i].IdleBabyWorldRoot.name} " +
+                            $"SetActive({!baby.HasKeyPlaced})");
+                    }
                 }
 
                 if (babyLockVisuals[i].IsSceneProvided && babyLockVisuals[i].Transform != null)
