@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace TuringSignal.UI
@@ -17,6 +18,10 @@ namespace TuringSignal.UI
         {
             if (pauseToggleButton != null)
             {
+                Navigation nav = pauseToggleButton.navigation;
+                nav.mode = Navigation.Mode.None;
+                pauseToggleButton.navigation = nav;
+
                 pauseToggleButton.onClick.RemoveListener(TogglePause);
                 pauseToggleButton.onClick.AddListener(TogglePause);
             }
@@ -39,6 +44,15 @@ namespace TuringSignal.UI
         {
             isPaused = !isPaused;
             Time.timeScale = isPaused ? 0f : 1f;
+            ClearEventSystemSelection();
+        }
+
+        private static void ClearEventSystemSelection()
+        {
+            if (EventSystem.current != null)
+            {
+                EventSystem.current.SetSelectedGameObject(null);
+            }
         }
     }
 }

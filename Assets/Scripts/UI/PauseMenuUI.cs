@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -90,6 +91,7 @@ namespace TuringSignal.UI
             isPaused = true;
             Time.timeScale = 0f;
             SetMenuVisible(true);
+            ClearEventSystemSelection();
         }
 
         public void ResumeGame()
@@ -97,6 +99,7 @@ namespace TuringSignal.UI
             isPaused = false;
             Time.timeScale = 1f;
             SetMenuVisible(false);
+            ClearEventSystemSelection();
         }
 
         public void LoadLevelByName(string sceneName)
@@ -127,6 +130,7 @@ namespace TuringSignal.UI
         {
             Time.timeScale = 1f;
             isPaused = false;
+            ClearEventSystemSelection();
         }
 
         private void SetMenuVisible(bool visible)
@@ -134,6 +138,14 @@ namespace TuringSignal.UI
             if (menuRoot != null)
             {
                 menuRoot.SetActive(visible);
+            }
+        }
+
+        private static void ClearEventSystemSelection()
+        {
+            if (EventSystem.current != null)
+            {
+                EventSystem.current.SetSelectedGameObject(null);
             }
         }
     }
