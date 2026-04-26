@@ -52,9 +52,6 @@ namespace TuringSignal.Gameplay
         [Header("Failure")]
         [SerializeField] private float restartDelay = 0.2f;
 
-        [Header("Debug")]
-        [SerializeField] private bool trapDebugLogs;
-
         private GridMap gridMap;
         private RobotLogic robotLogic;
         private GridItemLogic[] genericInteractables = new GridItemLogic[0];
@@ -243,14 +240,12 @@ namespace TuringSignal.Gameplay
             bool hitTrap = IsRobotOnActiveTrap(trapEvalTickIndex);
             bool atGoalCell = robotLogic.GridPosition == goalGridPosition;
             bool reachedGoal = atGoalCell && (!RequiresAllLocksForVictory || AreAllLocksFilled());
-            LogTrapTickDebug(tickIndex, trapEvalTickIndex, intentForTick, robotCellBefore, robotCellAfter, hitTrap);
             UpdateGridPreview();
             StartCoroutine(ResolveTickOutcomeAfterVisuals(tickIndex, hitTrap, reachedGoal));
         }
 
         private void HandleMoveBlocked(Vector2Int targetCell)
         {
-            Debug.Log($"Move blocked at {targetCell}.");
             PlayDeathAudio();
             RestartCurrentLevel();
         }
@@ -746,7 +741,6 @@ namespace TuringSignal.Gameplay
 
             if (hitTrap)
             {
-                Debug.Log("Robot hit an active trap.");
                 PlayDeathAudio();
                 RestartCurrentLevel();
                 yield break;
@@ -762,34 +756,5 @@ namespace TuringSignal.Gameplay
             UpdateGridPreview();
         }
 
-        private void LogTrapTickDebug(
-            int executedTickIndex,
-            int trapEvalTickIndex,
-            RobotIntent intentForTick,
-            Vector2Int robotCellBefore,
-            Vector2Int robotCellAfter,
-            bool hitTrap)
-        {
-            if (!trapDebugLogs)
-            {
-                return;
-            }
-
-            bool oddPhaseExec = IsOddTrapPhase(executedTickIndex);
-            bool oddPhaseEval = IsOddTrapPhase(trapEvalTickIndex);
-            bool onOddTrapBefore = ContainsCell(oddTrapCells, robotCellBefore);
-            bool onEvenTrapBefore = ContainsCell(evenTrapCells, robotCellBefore);
-            bool onOddTrapAfter = ContainsCell(oddTrapCells, robotCellAfter);
-            bool onEvenTrapAfter = ContainsCell(evenTrapCells, robotCellAfter);
-
-            Debug.Log(
-                $"[TrapDebug] ExecTick={executedTickIndex} ExecPhase={(oddPhaseExec ? "ODD" : "EVEN")} " +
-                $"TrapEvalTick={trapEvalTickIndex} EvalPhase={(oddPhaseEval ? "ODD" : "EVEN")} " +
-                $"Intent={intentForTick.Type}/{intentForTick.Direction} " +
-                $"Before={robotCellBefore} After={robotCellAfter} " +
-                $"BeforeTrap(O:{onOddTrapBefore},E:{onEvenTrapBefore}) " +
-                $"AfterTrap(O:{onOddTrapAfter},E:{onEvenTrapAfter}) " +
-                $"HitTrap={hitTrap}");
-        }
     }
 }

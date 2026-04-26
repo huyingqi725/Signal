@@ -27,10 +27,6 @@ namespace TuringSignal.Input
         /// <summary>本帧内只允许一次交互意图（键盘 E 与 UI 绿灯共用）。</summary>
         private int _interactIntentConsumedFrame = -1;
 
-        [Header("Debug")]
-        [Tooltip("勾选后：TryRotateFromUi / TryInteractFromUi 因规则被拒时在 Console 打出原因（便于排查按钮无反应）。")]
-        [SerializeField] private bool logUiIntentRejections;
-
         public void Initialize(
             TickManager tickManager,
             RobotLogic robotLogic,
@@ -62,7 +58,7 @@ namespace TuringSignal.Input
             if (UnityEngine.Input.GetKeyDown(interactKey)
                 && TryConsumeInteractIntentThisFrame())
             {
-                TryApplyInteractIntent(false);
+                TryApplyInteractIntent();
             }
         }
 
@@ -73,7 +69,6 @@ namespace TuringSignal.Input
         {
             if (!CanAcceptIntentThisFrame())
             {
-                LogUiRejection("TryRotateFromUi");
                 return;
             }
 
@@ -92,7 +87,6 @@ namespace TuringSignal.Input
         {
             if (!CanAcceptIntentThisFrame())
             {
-                LogUiRejection("TryInteractFromUi");
                 return;
             }
 
@@ -101,7 +95,7 @@ namespace TuringSignal.Input
                 return;
             }
 
-            TryApplyInteractIntent(true);
+            TryApplyInteractIntent();
         }
 
         private bool TryConsumeRotateIntentThisFrame()
@@ -144,17 +138,10 @@ namespace TuringSignal.Input
             OnRotatePressed?.Invoke();
         }
 
-        private void TryApplyInteractIntent(bool fromUi)
+        private void TryApplyInteractIntent()
         {
             if (restrictInteractToFacingInteractable && !robotLogic.HasInteractableInFront())
             {
-                if (fromUi && logUiIntentRejections)
-                {
-                    Debug.Log(
-                        "[RobotInputRouter] TryInteractFromUi: 前方没有可交互物（与按 E 无效时相同）。",
-                        this);
-                }
-
                 return;
             }
 
@@ -162,33 +149,5 @@ namespace TuringSignal.Input
             OnInteractPressed?.Invoke();
         }
 
-        private void LogUiRejection(string methodName)
-        {
-            if (!logUiIntentRejections)
-            {
-                return;
-            }
-
-            string reason;
-
-            if (!inputEnabled)
-            {
-                reason = "输入已关闭（例如过关过渡中）。";
-            }
-            else if (tickManager == null || robotLogic == null)
-            {
-                reason = "尚未 Initialize（缺少 TickManager / RobotLogic 引用）。";
-            }
-            else if (!tickManager.IsDecisionWindowOpen)
-            {
-                reason = "当前不在决策窗内（节拍正在执行中，稍等再按）。";
-            }
-            else
-            {
-                reason = "未知。";
-            }
-
-            Debug.Log($"[RobotInputRouter] {methodName} 未生效：{reason}", this);
-        }
     }
 }

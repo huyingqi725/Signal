@@ -86,11 +86,6 @@ namespace TuringSignal.View
         [SerializeField] private Sprite redKeyHeldSprite;
         [SerializeField] private Sprite blueKeyHeldSprite;
         [SerializeField] private int sortingOrder = 12;
-        [Header("Debug — BabyLock")]
-        [Tooltip("勾选后：婴儿锁逻辑层成功插钥匙会打 [BabyLockLogic]；视图刷新会打 [BabyLockView]。")]
-        [SerializeField] private bool logBabyLockFillDiagnostics;
-        [Tooltip("勾选后：收到婴儿锁填充回调时调用 Debug.Break()（编辑器暂停，等同断点）。需勾选后再进入 Play。")]
-        [SerializeField] private bool breakOnBabyLockFilled;
 
         private GridView gridView;
         private RobotLogic subscribedRobot;
@@ -135,8 +130,6 @@ namespace TuringSignal.View
             BabyLockItemLogic[] babyLocks)
         {
             Shutdown();
-
-            BabyLockItemLogic.DiagnosticsEnabled = logBabyLockFillDiagnostics;
 
             this.gridView = gridView;
             subscribedRobot = robotLogic;
@@ -316,8 +309,6 @@ namespace TuringSignal.View
 
             babyLockVisuals = System.Array.Empty<BabyLockVisual>();
 
-            BabyLockItemLogic.DiagnosticsEnabled = false;
-
             if (heldKeyTransform != null)
             {
                 Destroy(heldKeyTransform.gameObject);
@@ -444,18 +435,6 @@ namespace TuringSignal.View
 
         private void HandleBabyLockKeyPlaced(BabyLockItemLogic baby)
         {
-            if (breakOnBabyLockFilled)
-            {
-                Debug.Break();
-            }
-
-            if (logBabyLockFillDiagnostics)
-            {
-                Debug.Log(
-                    $"[BabyLockView] OnKeyPlaced callback — grid={baby.GridPosition} color={baby.Color} face={baby.InteractionFace} " +
-                    $"HasKeyPlaced={baby.HasKeyPlaced}");
-            }
-
             RefreshBabyLockWorld(baby);
         }
 
@@ -527,26 +506,12 @@ namespace TuringSignal.View
                 if (babyLockVisuals[i].IdleBabyWorldRoot != null)
                 {
                     babyLockVisuals[i].IdleBabyWorldRoot.gameObject.SetActive(!baby.HasKeyPlaced);
-
-                    if (logBabyLockFillDiagnostics)
-                    {
-                        Debug.Log(
-                            $"[BabyLockView] Refresh — idleBabyWorldRoot={babyLockVisuals[i].IdleBabyWorldRoot.name} " +
-                            $"SetActive({!baby.HasKeyPlaced})");
-                    }
                 }
 
                 if (babyLockVisuals[i].IsSceneProvided && babyLockVisuals[i].Transform != null)
                 {
                     bool show = baby.HasKeyPlaced;
                     babyLockVisuals[i].Transform.gameObject.SetActive(show);
-
-                    if (logBabyLockFillDiagnostics)
-                    {
-                        Debug.Log(
-                            $"[BabyLockView] Refresh — scene override root={babyLockVisuals[i].Transform.name} SetActive({show})");
-                    }
-
                     return;
                 }
 
@@ -554,23 +519,10 @@ namespace TuringSignal.View
 
                 if (r == null)
                 {
-                    if (logBabyLockFillDiagnostics)
-                    {
-                        Debug.LogWarning(
-                            $"[BabyLockView] Refresh — no SpriteRenderer (programmatic child missing?). grid={baby.GridPosition}");
-                    }
-
                     return;
                 }
 
                 Sprite sprite = GetLockSprite(baby.Color, baby.HasKeyPlaced);
-
-                if (logBabyLockFillDiagnostics)
-                {
-                    Debug.Log(
-                        $"[BabyLockView] Refresh — sprite path color={baby.Color} filled={baby.HasKeyPlaced} " +
-                        $"sprite={(sprite != null ? sprite.name : "null")} enabledWillBe={sprite != null}");
-                }
 
                 if (sprite != null)
                 {
@@ -579,13 +531,6 @@ namespace TuringSignal.View
 
                 r.enabled = sprite != null;
                 return;
-            }
-
-            if (logBabyLockFillDiagnostics)
-            {
-                Debug.LogWarning(
-                    $"[BabyLockView] Refresh — no matching babyLockVisuals slot for grid={baby.GridPosition} " +
-                    $"(KeyLockView.Initialize 时婴儿锁数量与当前不一致，或本组件未绑定到 GameBootstrap 的 Key Lock View。)");
             }
         }
 

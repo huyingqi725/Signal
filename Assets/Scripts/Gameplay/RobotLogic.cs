@@ -130,11 +130,6 @@ namespace TuringSignal.Gameplay
 
             GridPosition = target;
             OnMoveSucceeded?.Invoke(from, target);
-
-            if (gridMap.HasTrapAt(target))
-            {
-                Debug.Log("Robot stepped on a trap cell.");
-            }
         }
 
         private void ExecuteInteract()
@@ -143,14 +138,12 @@ namespace TuringSignal.Gameplay
 
             if (!gridMap.TryGetInteractable(targetCell, out IBoardInteractable interactable))
             {
-                Debug.Log($"No interactable found in front cell {targetCell}.");
                 OnInteractFailed?.Invoke(targetCell);
                 return;
             }
 
             if (!interactable.CanInteract(this))
             {
-                Debug.Log("Interactable rejected the interaction.");
                 OnInteractFailed?.Invoke(targetCell);
                 return;
             }

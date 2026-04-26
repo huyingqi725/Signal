@@ -46,8 +46,6 @@ namespace TuringSignal.Gameplay
             IsConsumed = true;
             gridMap.ClearInteractable(GridPosition);
             OnInteracted?.Invoke(this);
-
-            Debug.Log($"Interacted with '{InteractableId}' at {GridPosition}.");
         }
     }
 }

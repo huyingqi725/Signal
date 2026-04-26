@@ -12,9 +12,6 @@ namespace TuringSignal.Gameplay
     /// </summary>
     public sealed class BabyLockItemLogic : IBoardInteractable
     {
-        /// <summary>Set by KeyLockView when its debug checkbox is enabled.</summary>
-        public static bool DiagnosticsEnabled { get; set; }
-
         private readonly GridMap gridMap;
 
         public KeyColor Color { get; }
@@ -75,14 +72,6 @@ namespace TuringSignal.Gameplay
 
             HasKeyPlaced = true;
             gridMap.ClearInteractable(GridPosition);
-
-            if (DiagnosticsEnabled)
-            {
-                Debug.Log(
-                    $"[BabyLockLogic] Fill OK — grid={GridPosition} color={Color} mouthOut={InteractionFace} " +
-                    $"reqFacing={DirectionUtility.RequiredRobotFacingForLockMouthOutward(InteractionFace)} " +
-                    $"HasKeyPlaced={HasKeyPlaced} (logic finished; if no [BabyLockView] line next, view did not refresh.)");
-            }
 
             OnKeyPlaced?.Invoke(this);
         }
